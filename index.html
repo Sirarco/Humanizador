@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Humanizer AI Dashboard v.2026.1 (Aggressive)</title>
+    <title>Humanizer AI Dashboard v.2026.2 (Interactive)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
     <style>
@@ -57,9 +57,6 @@
         .metric-card { background: var(--bg-color); padding: 1rem; border-radius: 8px; text-align: center; }
         .metric-value { font-size: 2rem; font-weight: 600; color: var(--primary); }
         
-        .findings-list { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
-        .finding-item { display: flex; justify-content: space-between; padding: 0.5rem; border-radius: 4px; font-size: 0.9rem; cursor: pointer; }
-        
         /* Legend markers */
         .cat-grasa { border-left: 4px solid #eab308; }
         .cat-conector { border-left: 4px solid #3b82f6; }
@@ -71,7 +68,7 @@
         .alert-box { display: none; background: #fee2e2; color: #991b1b; padding: 0.8rem; border-radius: 6px; font-size: 0.85rem; border: 1px solid #f87171; }
         [data-theme="dark"] .alert-box { background: #7f1d1d; color: #fecaca; border-color: #991b1b; }
 
-        #editor-container { flex: 1; padding: 2rem; overflow-y: auto; display: flex; justify-content: center; }
+        #editor-container { flex: 1; padding: 2rem; overflow-y: auto; display: flex; justify-content: center; position: relative; }
         #paper { background: var(--paper-bg); width: 100%; max-width: 800px; min-height: 800px; padding: 4rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); font-size: 1.1rem; line-height: 2; outline: none; border-radius: 4px; }
         
         mark { border-radius: 3px; padding: 0 0.2rem; cursor: pointer; transition: opacity 0.2s; }
@@ -83,9 +80,27 @@
         .mark-tic { background-color: var(--c-tic); }
         .mark-erudicion { background-color: var(--c-erudicion); }
 
+        /* --- UI del Acordeón y Tooltips --- */
+        .category-header { display: flex; justify-content: space-between; padding: 0.8rem; border-radius: 4px; font-size: 0.95rem; cursor: pointer; font-weight: 600; background: var(--bg-color); transition: 0.2s; border: 1px solid transparent; margin-bottom: 0.2rem; }
+        .category-header:hover { border-color: var(--border-color); filter: brightness(0.95); }
+        .category-body { display: none; padding: 0.5rem 0.5rem 1rem 0.5rem; flex-direction: column; gap: 0.5rem; }
+        .category-body.active { display: flex; }
+        .cat-desc { font-size: 0.8rem; color: #64748b; margin-bottom: 0.5rem; font-style: italic; line-height: 1.4; }
+        [data-theme="dark"] .cat-desc { color: #94a3b8; }
+        
+        .finding-instance { font-size: 0.85rem; padding: 0.4rem 0.6rem; background: var(--bg-color); border-radius: 4px; cursor: pointer; transition: 0.2s; border-left: 3px solid transparent; color: var(--text-color); }
+        .finding-instance:hover { filter: brightness(0.9); transform: translateX(2px); }
+        [data-theme="dark"] .finding-instance:hover { filter: brightness(1.2); }
+
+        #smart-tooltip { position: fixed; pointer-events: none; opacity: 0; transition: opacity 0.2s, transform 0.2s; background: var(--paper-bg); border: 1px solid var(--border-color); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 1rem; border-radius: 8px; z-index: 1000; width: 220px; transform: translateY(10px); }
+        #smart-tooltip.show { opacity: 1; transform: translateY(0); }
+        .tt-razon { font-size: 0.8rem; font-weight: 600; color: #ef4444; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .tt-sugerencia { font-size: 0.85rem; color: var(--text-color); line-height: 1.4; }
+        [data-theme="dark"] .tt-razon { color: #f87171; }
+
         @media (min-width: 768px) {
             .layout { flex-direction: row; }
-            #sidebar { width: 300px; height: calc(100vh - 70px); overflow-y: auto; }
+            #sidebar { width: 320px; height: calc(100vh - 70px); overflow-y: auto; }
             #editor-container { height: calc(100vh - 70px); }
         }
     </style>
@@ -93,7 +108,7 @@
 <body>
 
     <header>
-        <h1>Humanizer AI v.2026.1</h1>
+        <h1>Humanizer AI v.2026.2</h1>
         <div class="controls">
             <button id="themeToggle" class="btn-secondary">Modo Noche</button>
             <label class="btn btn-secondary">
@@ -116,16 +131,11 @@
                 <strong>⚠️ Cadencia Robótica Detectada:</strong> Los párrafos tienen una longitud excesivamente simétrica (Baja Desviación Estándar). Típico de IA.
             </div>
 
-            <div>
+            <div id="accordion-container">
                 <h3 style="margin-bottom: 1rem; font-size: 1rem;">Hallazgos por Categoría</h3>
-                <ul class="findings-list">
-                    <li class="finding-item cat-grasa">Grasa Verbal <span id="count-grasa">0</span></li>
-                    <li class="finding-item cat-conector">Conectores IA <span id="count-conector">0</span></li>
-                    <li class="finding-item cat-adjetivo">Adjetivos Vacíos <span id="count-adjetivo">0</span></li>
-                    <li class="finding-item cat-cliche">Clichés IA <span id="count-cliche">0</span></li>
-                    <li class="finding-item cat-tic">Tics Robóticos <span id="count-tic">0</span></li>
-                    <li class="finding-item cat-erudicion">Falsa Erudición <span id="count-erudicion">0</span></li>
-                </ul>
+                <div id="dynamic-accordion">
+                    <p style="font-size:0.85rem; color:gray;">Analiza el texto para ver los detalles.</p>
+                </div>
             </div>
         </aside>
 
@@ -136,158 +146,186 @@
         </section>
     </div>
 
+    <div id="smart-tooltip">
+        <div class="tt-razon" id="tt-razon"></div>
+        <div class="tt-sugerencia" id="tt-sugerencia"></div>
+    </div>
+
     <script>
-        // 1. Diccionario de Patrones (Full Agresivo v.2026.1)
-        const dict = {
-            grasa: [
-                "cabe destacar que", "es importante señalar", "es fundamental", "resulta imperativo", 
-                "como se mencionó anteriormente", "el presente informe", "el presente trabajo", 
-                "en conclusión", "a modo de resumen", "es preciso indicar", "se puede observar que", 
-                "es necesario recalcar", "conviene subrayar", "hay que tener en cuenta", 
-                "no se puede dejar de lado", "es de suma importancia", "pone el foco", "en otras palabras"
-            ],
-            conector: [
-                "asimismo", "adicionalmente", "en este sentido", "por consiguiente", "dicho esto", 
-                "sin embargo", "por lo tanto", "además", "por otra parte", "en consecuencia", 
-                "de igual manera", "bajo este contexto", "en tal sentido", "al respecto", 
-                "por medio de", "en respuesta", "para finalizar"
-            ],
-            adjetivo: [
-                "crucial", "vibrante", "fascinante", "innegable", "multifacético", "intrincado", 
-                "trascendental", "vital", "imprescindible", "significativo", "notable", "relevante", 
-                "profundo", "invaluable", "excepcional", "integral", "eficiente", "innovadora"
-            ],
-            cliche: [
-                "a lo largo de la historia", "en el tejido de", "un tapiz de", "navegar por las complejidades", 
-                "en última instancia", "el panorama actual", "es un testimonio de", "un crisol de", 
-                "arrojar luz sobre", "el corazón de", "en un mundo cada vez más", "juega un papel", 
-                "es imperativo comprender", "garantizando en todo momento", "buscando garantizar"
-            ],
-            tic: [
-                "no solo", "sino también", "ya sea", "tanto... como", "por un lado", "por otro lado", 
-                "si bien es cierto que", "es evidente que", "resulta innegable que", "a pesar de que", 
-                "independientemente de", "lo cual", "los cuales"
-            ],
-            erudicion: [
-                "paradigma", "holístico", "sinergia", "amalgama", "vanguardia", "epistemológico", 
-                "ontológico", "menester", "subyacente", "intrínseco", "extrínseco", "dicotomía", 
-                "hegemonía", "empírico", "convergencia", "probidad", "trazabilidad", "interoperabilidad"
-            ]
+        // 1. Diccionario Estructurado (v.2026.2)
+        const categoriesData = {
+            grasa: {
+                nombre: "Grasa Verbal", colorClase: "cat-grasa",
+                desc: "Frases de relleno que no aportan valor semántico. Diluyen el mensaje principal.",
+                razonDefecto: "Relleno innecesario", sugDefecto: "Eliminar o usar un verbo directo.",
+                palabras: ["cabe destacar que", "es importante señalar", "es fundamental", "resulta imperativo", "como se mencionó anteriormente", "el presente informe", "el presente trabajo", "en conclusión", "a modo de resumen", "es preciso indicar", "se puede observar que", "es necesario recalcar", "conviene subrayar", "hay que tener en cuenta", "no se puede dejar de lado", "es de suma importancia", "pone el foco", "en otras palabras"]
+            },
+            conector: {
+                nombre: "Conectores IA", colorClase: "cat-conector",
+                desc: "Transiciones mecánicas sobreutilizadas para enlazar párrafos de forma predecible.",
+                razonDefecto: "Transición mecánica", sugDefecto: "Omitir si el contraste o la continuidad ya son evidentes en el texto.",
+                palabras: ["asimismo", "adicionalmente", "en este sentido", "por consiguiente", "dicho esto", "sin embargo", "por lo tanto", "además", "por otra parte", "en consecuencia", "de igual manera", "bajo este contexto", "en tal sentido", "al respecto", "por medio de", "en respuesta", "para finalizar"]
+            },
+            adjetivo: {
+                nombre: "Adjetivos Vacíos", colorClase: "cat-adjetivo",
+                desc: "Modificadores excesivamente dramáticos o pretenciosos típicos de LLMs.",
+                razonDefecto: "Adjetivo pretencioso", sugDefecto: "Usar un adjetivo más preciso o eliminar.",
+                palabras: ["crucial", "vibrante", "fascinante", "innegable", "multifacético", "intrincado", "trascendental", "vital", "imprescindible", "significativo", "notable", "relevante", "profundo", "invaluable", "excepcional", "integral", "eficiente", "innovadora"]
+            },
+            cliche: {
+                nombre: "Clichés IA", colorClase: "cat-cliche",
+                desc: "Metáforas y fórmulas de apertura/cierre genéricas y algorítmicas.",
+                razonDefecto: "Fórmula algorítmica", sugDefecto: "Reescribir usando tu propia voz.",
+                palabras: ["a lo largo de la historia", "en el tejido de", "un tapiz de", "navegar por las complejidades", "en última instancia", "el panorama actual", "es un testimonio de", "un crisol de", "arrojar luz sobre", "el corazón de", "en un mundo cada vez más", "juega un papel", "es imperativo comprender", "garantizando en todo momento", "buscando garantizar"]
+            },
+            tic: {
+                nombre: "Tics Robóticos", colorClase: "cat-tic",
+                desc: "Estructuras sintácticas rígidas e iterativas (oraciones balanceadas).",
+                razonDefecto: "Estructura iterativa", sugDefecto: "Romper la simetría de la oración.",
+                palabras: ["no solo", "sino también", "ya sea", "tanto... como", "por un lado", "por otro lado", "si bien es cierto que", "es evidente que", "resulta innegable que", "a pesar de que", "independientemente de", "lo cual", "los cuales"]
+            },
+            erudicion: {
+                nombre: "Falsa Erudición", colorClase: "cat-erudicion",
+                desc: "Jerga académica comodín usada para aparentar mayor profundidad intelectual.",
+                razonDefecto: "Comodín académico", sugDefecto: "Aterrizar el concepto con palabras más sencillas.",
+                palabras: ["paradigma", "holístico", "sinergia", "amalgama", "vanguardia", "epistemológico", "ontológico", "menester", "subyacente", "intrínseco", "extrínseco", "dicotomía", "hegemonía", "empírico", "convergencia", "probidad", "trazabilidad", "interoperabilidad"]
+            }
         };
 
         const paper = document.getElementById('paper');
         const themeToggle = document.getElementById('themeToggle');
+        const accordionContainer = document.getElementById('dynamic-accordion');
+        const tooltip = document.getElementById('smart-tooltip');
         
-        // 2. Modo Noche
+        // Modo Noche
         themeToggle.addEventListener('click', () => {
             const isDark = document.body.getAttribute('data-theme') === 'dark';
             document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
         });
 
-        // 3. Importar Word (Mammoth.js)
+        // Importar Word (Mammoth.js)
         document.getElementById('uploadDoc').addEventListener('change', function(event) {
             const reader = new FileReader();
             reader.onload = function(loadEvent) {
-                const arrayBuffer = loadEvent.target.result;
-                mammoth.convertToHtml({arrayBuffer: arrayBuffer})
-                    .then(displayResult)
-                    .catch(handleError);
+                mammoth.convertToHtml({arrayBuffer: loadEvent.target.result})
+                    .then(r => paper.innerHTML = r.value || "<p>Documento vacío.</p>")
+                    .catch(e => alert("Error al leer Word."));
             };
             reader.readAsArrayBuffer(this.files[0]);
         });
 
-        function displayResult(result) {
-            paper.innerHTML = result.value || "<p>Documento vacío.</p>";
-        }
-        function handleError(err) {
-            console.error(err);
-            alert("Error al leer el archivo Word.");
-        }
-
-        // 4. Limpiar texto (Strip HTML) y copiar
+        // Copiar Limpio
         document.getElementById('btnClean').addEventListener('click', () => {
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = paper.innerHTML;
-            // Eliminar marcas
-            const marks = tempDiv.querySelectorAll('mark');
-            marks.forEach(mark => {
-                const text = document.createTextNode(mark.textContent);
-                mark.parentNode.replaceChild(text, mark);
-            });
-            
-            navigator.clipboard.writeText(tempDiv.innerText).then(() => {
-                alert("Texto limpio copiado al portapapeles.");
-            });
+            tempDiv.querySelectorAll('mark').forEach(m => m.replaceWith(document.createTextNode(m.textContent)));
+            navigator.clipboard.writeText(tempDiv.innerText).then(() => alert("Texto limpio copiado."));
         });
 
-        // 5. Motor de Análisis
-        document.getElementById('btnAnalyze').addEventListener('click', analyzeText);
+        // Lógica del Tooltip Flotante
+        paper.addEventListener('mouseover', (e) => {
+            if(e.target.tagName === 'MARK') {
+                document.getElementById('tt-razon').innerText = e.target.dataset.razon;
+                document.getElementById('tt-sugerencia').innerText = e.target.dataset.sugerencia;
+                
+                const rect = e.target.getBoundingClientRect();
+                // Posicionar dinámicamente arriba del texto
+                tooltip.style.left = `${Math.max(10, rect.left + (rect.width/2) - 110)}px`;
+                tooltip.style.top = `${rect.top - tooltip.offsetHeight - 10}px`;
+                tooltip.classList.add('show');
+            }
+        });
+        paper.addEventListener('mouseout', (e) => {
+            if(e.target.tagName === 'MARK') tooltip.classList.remove('show');
+        });
 
-        function analyzeText() {
+        // Hacer scroll suave hacia el ID
+        window.scrollToMark = function(id) {
+            const el = document.getElementById(id);
+            if(el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Pequeño efecto visual para destacar a dónde saltó
+                el.style.outline = "2px solid red";
+                setTimeout(() => el.style.outline = "none", 1500);
+            }
+        };
+
+        // Lógica de Acordeón
+        window.toggleAccordion = function(catKey) {
+            document.querySelectorAll('.category-body').forEach(body => {
+                if(body.id === `body-${catKey}`) body.classList.toggle('active');
+                else body.classList.remove('active'); // Cierra los demás
+            });
+        };
+
+        // Motor de Análisis Principal
+        document.getElementById('btnAnalyze').addEventListener('click', () => {
             let htmlContent = paper.innerHTML;
-            // Limpiar marcas previas
-            htmlContent = htmlContent.replace(/<mark class="mark-[^>]+>(.*?)<\/mark>/gi, "$1");
+            htmlContent = htmlContent.replace(/<mark[^>]*>(.*?)<\/mark>/gi, "$1"); // Limpiar
 
-            // Extraer texto plano para contar palabras y párrafos
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = htmlContent;
             const plainText = tempDiv.innerText;
-            
-            const totalWords = plainText.trim().split(/\s+/).filter(word => word.length > 0).length;
+            const totalWords = plainText.trim().split(/\s+/).filter(w => w.length > 0).length;
             if(totalWords === 0) return;
 
-            // Análisis de Cadencia (Varianza de longitud de párrafos - Actualizado)
-            const paragraphs = plainText.split('\n').filter(p => p.trim().length > 0);
-            // Filtramos viñetas o títulos (menos de 10 palabras)
-            const pLengths = paragraphs.map(p => p.trim().split(/\s+/).length).filter(len => len >= 10);
-            
+            // Cadencia Robótica
+            const pLengths = plainText.split('\n').filter(p => p.trim().length > 0).map(p => p.trim().split(/\s+/).length).filter(l => l >= 10);
             if(pLengths.length > 3) {
                 const mean = pLengths.reduce((a, b) => a + b, 0) / pLengths.length;
-                const variance = pLengths.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / pLengths.length;
-                const stdDev = Math.sqrt(variance);
-                
-                // Umbral más agresivo (< 12)
+                const stdDev = Math.sqrt(pLengths.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / pLengths.length);
                 document.getElementById('cadenceAlert').style.display = stdDev < 12 ? 'block' : 'none';
             } else {
                 document.getElementById('cadenceAlert').style.display = 'none';
             }
 
             let totalMatches = 0;
-            const counts = { grasa: 0, conector: 0, adjetivo: 0, cliche: 0, tic: 0, erudicion: 0 };
+            let accordionHTML = '';
+            let instanceCounter = 0;
 
-            // Reemplazo seguro usando regex (Ignora atributos HTML)
-            for (const [category, phrases] of Object.entries(dict)) {
-                // Ordenar por longitud descendente para evitar sub-coincidencias
-                const sortedPhrases = phrases.sort((a, b) => b.length - a.length);
+            // Procesar RegEx e Inyectar Datos
+            for (const [key, data] of Object.entries(categoriesData)) {
+                let catMatches = [];
+                const sortedPhrases = data.palabras.sort((a, b) => b.length - a.length);
                 
                 sortedPhrases.forEach(phrase => {
-                    // Lookaround regex para no reemplazar texto dentro de tags HTML ya formados
                     const regex = new RegExp(`(?<!<[^>]*)\\b(${phrase})\\b(?![^<]*>)`, 'gi');
-                    
-                    const matches = htmlContent.match(regex);
-                    if(matches) {
-                        counts[category] += matches.length;
-                        totalMatches += matches.length;
-                        htmlContent = htmlContent.replace(regex, `<mark class="mark-${category}">$1</mark>`);
-                    }
+                    htmlContent = htmlContent.replace(regex, (match) => {
+                        instanceCounter++;
+                        const markId = `mark-${key}-${instanceCounter}`;
+                        catMatches.push({ word: match, id: markId });
+                        totalMatches++;
+                        // Inyectamos el ID, la clase de color y los atributos de datos para el tooltip
+                        return `<mark id="${markId}" class="mark-${key}" data-razon="${data.razonDefecto}" data-sugerencia="${data.sugDefecto}">${match}</mark>`;
+                    });
                 });
+
+                // Construir HTML del Acordeón para esta categoría
+                accordionHTML += `
+                    <div class="category-header ${data.colorClase}" onclick="toggleAccordion('${key}')">
+                        <span>${data.nombre}</span>
+                        <span>${catMatches.length}</span>
+                    </div>
+                    <div class="category-body" id="body-${key}">
+                        <div class="cat-desc">${data.desc}</div>
+                `;
+                
+                if(catMatches.length === 0) {
+                    accordionHTML += `<div style="font-size:0.8rem; color:gray;">No se encontraron patrones.</div>`;
+                } else {
+                    catMatches.forEach(m => {
+                        accordionHTML += `<div class="finding-instance ${data.colorClase}" onclick="scrollToMark('${m.id}')">🔍 "${m.word}"</div>`;
+                    });
+                }
+                accordionHTML += `</div>`;
             }
 
             paper.innerHTML = htmlContent;
+            accordionContainer.innerHTML = accordionHTML;
 
-            // Actualizar Dashboard
-            document.getElementById('count-grasa').innerText = counts.grasa;
-            document.getElementById('count-conector').innerText = counts.conector;
-            document.getElementById('count-adjetivo').innerText = counts.adjetivo;
-            document.getElementById('count-cliche').innerText = counts.cliche;
-            document.getElementById('count-tic').innerText = counts.tic;
-            document.getElementById('count-erudicion').innerText = counts.erudicion;
-
-            // Fórmula: Densidad IA (%) = (Palabras Detectadas estimadas / Total Palabras) * 100
-            // Usamos totalMatches, asumiendo promedio de 2 palabras por hallazgo como peso aproximado.
             const density = Math.min(100, ((totalMatches * 1.5) / totalWords) * 100).toFixed(1);
             document.getElementById('densityMetric').innerText = `${density}%`;
-        }
+        });
     </script>
 </body>
 </html>
