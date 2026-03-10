@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Humanizer AI Dashboard v.2026.2 (Interactive)</title>
+    <title>Humanizer AI Dashboard v.3.0 (Enterprise)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
     <style>
@@ -16,12 +16,13 @@
             --primary: #2563eb;
             --primary-hover: #1d4ed8;
             /* Highlight Colors */
-            --c-grasa: #fef08a; /* Yellow */
-            --c-conector: #bfdbfe; /* Blue */
-            --c-adjetivo: #fed7aa; /* Orange */
-            --c-cliche: #fbcfe8; /* Pink */
-            --c-tic: #e9d5ff; /* Purple */
-            --c-erudicion: #a7f3d0; /* Emerald */
+            --c-grasa: #fef08a; 
+            --c-conector: #bfdbfe; 
+            --c-adjetivo: #fed7aa; 
+            --c-cliche: #fbcfe8; 
+            --c-tic: #e9d5ff; 
+            --c-erudicion: #a7f3d0; 
+            --c-primera: #fecaca; /* Red/Rose para 1ra persona */
         }
 
         [data-theme="dark"] {
@@ -30,91 +31,98 @@
             --paper-bg: #1e293b;
             --sidebar-bg: #1e293b;
             --border-color: #334155;
-            --c-grasa: #854d0e; 
-            --c-conector: #1e3a8a; 
-            --c-adjetivo: #9a3412; 
-            --c-cliche: #831843; 
-            --c-tic: #581c87; 
-            --c-erudicion: #065f46; 
+            --c-grasa: #ca8a04; 
+            --c-conector: #2563eb; 
+            --c-adjetivo: #ea580c; 
+            --c-cliche: #db2777; 
+            --c-tic: #9333ea; 
+            --c-erudicion: #059669; 
+            --c-primera: #b91c1c;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); transition: 0.3s; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); transition: 0.3s; overflow: hidden; }
         
-        header { padding: 1rem 2rem; background: var(--sidebar-bg); border-bottom: 1px solid var(--border-color); display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; }
-        h1 { font-size: 1.2rem; font-weight: 600; }
+        header { padding: 1rem 2rem; background: var(--sidebar-bg); border-bottom: 1px solid var(--border-color); display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; z-index: 10; position: relative; }
+        h1 { font-size: 1.2rem; font-weight: 600; display: flex; align-items: center; gap: 10px;}
         
+        /* Spinner de Carga */
+        .loader { display: none; width: 18px; height: 18px; border: 2px solid var(--primary); border-bottom-color: transparent; border-radius: 50%; animation: rotation 1s linear infinite; }
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
         .controls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
         button, label.btn { background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: 0.2s; display: inline-block; }
         button:hover, label.btn:hover { background: var(--primary-hover); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
         .btn-secondary { background: transparent; color: var(--text-color); border: 1px solid var(--border-color); }
         .btn-secondary:hover { background: var(--border-color); }
         input[type="file"] { display: none; }
 
-        .layout { display: flex; flex-direction: column; min-height: calc(100vh - 70px); }
+        .layout { display: flex; flex-direction: row; height: calc(100vh - 70px); }
         
-        #sidebar { background: var(--sidebar-bg); border-right: 1px solid var(--border-color); padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
+        #sidebar { width: 340px; background: var(--sidebar-bg); border-right: 1px solid var(--border-color); padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; }
         .metric-card { background: var(--bg-color); padding: 1rem; border-radius: 8px; text-align: center; }
         .metric-value { font-size: 2rem; font-weight: 600; color: var(--primary); }
         
-        /* Legend markers */
-        .cat-grasa { border-left: 4px solid #eab308; }
-        .cat-conector { border-left: 4px solid #3b82f6; }
-        .cat-adjetivo { border-left: 4px solid #f97316; }
-        .cat-cliche { border-left: 4px solid #ec4899; }
-        .cat-tic { border-left: 4px solid #a855f7; }
-        .cat-erudicion { border-left: 4px solid #10b981; }
-
-        .alert-box { display: none; background: #fee2e2; color: #991b1b; padding: 0.8rem; border-radius: 6px; font-size: 0.85rem; border: 1px solid #f87171; }
+        .alert-box { display: none; background: #fee2e2; color: #991b1b; padding: 0.8rem; border-radius: 6px; font-size: 0.8rem; border: 1px solid #f87171; line-height: 1.4; }
         [data-theme="dark"] .alert-box { background: #7f1d1d; color: #fecaca; border-color: #991b1b; }
+        .alert-warning { background: #fef9c3; color: #854d0e; border-color: #facc15; }
+        [data-theme="dark"] .alert-warning { background: #422006; color: #fef08a; border-color: #ca8a04; }
 
-        #editor-container { flex: 1; padding: 2rem; overflow-y: auto; display: flex; justify-content: center; position: relative; }
-        #paper { background: var(--paper-bg); width: 100%; max-width: 800px; min-height: 800px; padding: 4rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); font-size: 1.1rem; line-height: 2; outline: none; border-radius: 4px; }
-        
-        mark { border-radius: 3px; padding: 0 0.2rem; cursor: pointer; transition: opacity 0.2s; }
-        mark:hover { opacity: 0.8; }
-        .mark-grasa { background-color: var(--c-grasa); }
-        .mark-conector { background-color: var(--c-conector); }
-        .mark-adjetivo { background-color: var(--c-adjetivo); }
-        .mark-cliche { background-color: var(--c-cliche); }
-        .mark-tic { background-color: var(--c-tic); }
-        .mark-erudicion { background-color: var(--c-erudicion); }
+        /* Categorías y Acordeón */
+        .cat-grasa { border-left: 4px solid #eab308; } .mark-grasa { background-color: var(--c-grasa); }
+        .cat-conector { border-left: 4px solid #3b82f6; } .mark-conector { background-color: var(--c-conector); }
+        .cat-adjetivo { border-left: 4px solid #f97316; } .mark-adjetivo { background-color: var(--c-adjetivo); }
+        .cat-cliche { border-left: 4px solid #ec4899; } .mark-cliche { background-color: var(--c-cliche); }
+        .cat-tic { border-left: 4px solid #a855f7; } .mark-tic { background-color: var(--c-tic); }
+        .cat-erudicion { border-left: 4px solid #10b981; } .mark-erudicion { background-color: var(--c-erudicion); }
+        .cat-primera { border-left: 4px solid #ef4444; } .mark-primera { background-color: var(--c-primera); }
 
-        /* --- UI del Acordeón y Tooltips --- */
         .category-header { display: flex; justify-content: space-between; padding: 0.8rem; border-radius: 4px; font-size: 0.95rem; cursor: pointer; font-weight: 600; background: var(--bg-color); transition: 0.2s; border: 1px solid transparent; margin-bottom: 0.2rem; }
         .category-header:hover { border-color: var(--border-color); filter: brightness(0.95); }
         .category-body { display: none; padding: 0.5rem 0.5rem 1rem 0.5rem; flex-direction: column; gap: 0.5rem; }
         .category-body.active { display: flex; }
-        .cat-desc { font-size: 0.8rem; color: #64748b; margin-bottom: 0.5rem; font-style: italic; line-height: 1.4; }
-        [data-theme="dark"] .cat-desc { color: #94a3b8; }
-        
-        .finding-instance { font-size: 0.85rem; padding: 0.4rem 0.6rem; background: var(--bg-color); border-radius: 4px; cursor: pointer; transition: 0.2s; border-left: 3px solid transparent; color: var(--text-color); }
+        .cat-desc { font-size: 0.8rem; color: #64748b; margin-bottom: 0.5rem; font-style: italic; }
+        .finding-instance { font-size: 0.85rem; padding: 0.4rem 0.6rem; background: var(--bg-color); border-radius: 4px; cursor: pointer; transition: 0.2s; border-left: 3px solid transparent; color: var(--text-color); display: flex; justify-content: space-between;}
         .finding-instance:hover { filter: brightness(0.9); transform: translateX(2px); }
-        [data-theme="dark"] .finding-instance:hover { filter: brightness(1.2); }
 
-        #smart-tooltip { position: fixed; pointer-events: none; opacity: 0; transition: opacity 0.2s, transform 0.2s; background: var(--paper-bg); border: 1px solid var(--border-color); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 1rem; border-radius: 8px; z-index: 1000; width: 220px; transform: translateY(10px); }
-        #smart-tooltip.show { opacity: 1; transform: translateY(0); }
-        .tt-razon { font-size: 0.8rem; font-weight: 600; color: #ef4444; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.5px; }
-        .tt-sugerencia { font-size: 0.85rem; color: var(--text-color); line-height: 1.4; }
-        [data-theme="dark"] .tt-razon { color: #f87171; }
+        /* Editor y Heatmap */
+        #main-view { flex: 1; display: flex; position: relative; overflow: hidden; }
+        #editor-container { flex: 1; padding: 2rem; overflow-y: auto; display: flex; justify-content: center; scroll-behavior: smooth; }
+        #paper { background: var(--paper-bg); width: 100%; max-width: 800px; min-height: 800px; padding: 4rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); font-size: 1.1rem; line-height: 2; outline: none; border-radius: 4px; }
+        mark { border-radius: 3px; padding: 0 0.2rem; cursor: pointer; transition: opacity 0.2s; color: inherit; }
+        mark:hover { opacity: 0.8; outline: 1px dashed var(--text-color); }
+        
+        #heatmap-container { width: 24px; background: var(--sidebar-bg); border-left: 1px solid var(--border-color); position: relative; }
+        .heat-tick { position: absolute; width: 100%; height: 4px; opacity: 0.7; cursor: pointer; }
+        .heat-tick:hover { opacity: 1; transform: scaleY(1.5); }
 
-        @media (min-width: 768px) {
-            .layout { flex-direction: row; }
-            #sidebar { width: 320px; height: calc(100vh - 70px); overflow-y: auto; }
-            #editor-container { height: calc(100vh - 70px); }
+        /* Tooltip */
+        #smart-tooltip { position: fixed; opacity: 0; pointer-events: none; transition: opacity 0.2s; background: var(--paper-bg); border: 1px solid var(--border-color); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 1rem; border-radius: 8px; z-index: 1000; width: 240px; }
+        #smart-tooltip.show { opacity: 1; pointer-events: auto; }
+        .tt-razon { font-size: 0.8rem; font-weight: 600; color: #ef4444; margin-bottom: 0.4rem; text-transform: uppercase; }
+        .tt-sugerencia { font-size: 0.85rem; color: var(--text-color); margin-bottom: 0.8rem; line-height: 1.4; }
+        .btn-ignore { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 0.3rem 0.6rem; font-size: 0.75rem; width: 100%; text-align: center; }
+        .btn-ignore:hover { background: #e2e8f0; color: #0f172a; }
+        [data-theme="dark"] .btn-ignore { background: #334155; color: #cbd5e1; border-color: #475569; }
+
+        @media (max-width: 768px) {
+            .layout { flex-direction: column; height: auto; }
+            #sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border-color); }
+            #main-view { height: 80vh; }
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>Humanizer AI v.2026.2</h1>
+        <h1>Humanizer AI v.3.0 <div class="loader" id="loader"></div></h1>
         <div class="controls">
             <button id="themeToggle" class="btn-secondary">Modo Noche</button>
             <label class="btn btn-secondary">
                 Importar .docx <input type="file" id="uploadDoc" accept=".docx">
             </label>
-            <button id="btnClean" class="btn-secondary">Copiar Limpio</button>
+            <button id="btnClean" class="btn-secondary">Exportar Limpio</button>
             <button id="btnAnalyze">Analizar Texto</button>
         </div>
     </header>
@@ -128,162 +136,204 @@
             </div>
 
             <div class="alert-box" id="cadenceAlert">
-                <strong>⚠️ Cadencia Robótica Detectada:</strong> Los párrafos tienen una longitud excesivamente simétrica (Baja Desviación Estándar). Típico de IA.
+                <strong>⚠️ Cadencia Robótica (Párrafos):</strong> Longitud excesivamente simétrica.
+            </div>
+            <div class="alert-box alert-warning" id="sentenceAlert">
+                <strong>⚠️ Sintaxis Monótona:</strong> Las oraciones miden casi lo mismo. Falta ritmo humano.
+            </div>
+            <div class="alert-box alert-warning" id="ttrAlert">
+                <strong>⚠️ Pobreza Léxica:</strong> El texto repite mucho el mismo vocabulario (TTR bajo).
             </div>
 
             <div id="accordion-container">
-                <h3 style="margin-bottom: 1rem; font-size: 1rem;">Hallazgos por Categoría</h3>
+                <h3 style="margin-bottom: 1rem; font-size: 1rem;">Detalle de Hallazgos</h3>
                 <div id="dynamic-accordion">
                     <p style="font-size:0.85rem; color:gray;">Analiza el texto para ver los detalles.</p>
                 </div>
             </div>
         </aside>
 
-        <section id="editor-container">
-            <div id="paper" contenteditable="true">
-                <p>Pega tu texto aquí o importa un documento Word (.docx) para comenzar el análisis.</p>
+        <section id="main-view">
+            <div id="editor-container">
+                <div id="paper" contenteditable="true">
+                    <p>Pega tu texto aquí o importa un documento Word (.docx).</p>
+                </div>
             </div>
+            <div id="heatmap-container">
+                </div>
         </section>
     </div>
 
     <div id="smart-tooltip">
         <div class="tt-razon" id="tt-razon"></div>
         <div class="tt-sugerencia" id="tt-sugerencia"></div>
+        <button class="btn btn-ignore" id="btn-ignore-action">Ignorar Hallazgo</button>
     </div>
 
     <script>
-        // 1. Diccionario Estructurado (v.2026.2)
+        // 1. Diccionario Estructurado (v.3.0) - Incluye Voz en 1ra Persona
         const categoriesData = {
+            primera: {
+                nombre: "Voz en 1ra Persona", colorClase: "cat-primera", colorHex: "#ef4444",
+                desc: "Rompimiento del tono formal de 3ra persona.",
+                razonDefecto: "Subjetividad Académica", sugDefecto: "Cambiar a formato impersonal (ej: 'se analiza', 'se concluye').",
+                palabras: ["yo", "nosotros", "nuestro", "nuestra", "nuestros", "nuestras", "creemos", "pensamos", "analizamos", "observamos", "concluimos", "en mi opinión", "mi perspectiva", "hemos"]
+            },
             grasa: {
-                nombre: "Grasa Verbal", colorClase: "cat-grasa",
-                desc: "Frases de relleno que no aportan valor semántico. Diluyen el mensaje principal.",
+                nombre: "Grasa Verbal", colorClase: "cat-grasa", colorHex: "#eab308",
+                desc: "Frases de relleno que diluyen el mensaje.",
                 razonDefecto: "Relleno innecesario", sugDefecto: "Eliminar o usar un verbo directo.",
                 palabras: ["cabe destacar que", "es importante señalar", "es fundamental", "resulta imperativo", "como se mencionó anteriormente", "el presente informe", "el presente trabajo", "en conclusión", "a modo de resumen", "es preciso indicar", "se puede observar que", "es necesario recalcar", "conviene subrayar", "hay que tener en cuenta", "no se puede dejar de lado", "es de suma importancia", "pone el foco", "en otras palabras"]
             },
             conector: {
-                nombre: "Conectores IA", colorClase: "cat-conector",
-                desc: "Transiciones mecánicas sobreutilizadas para enlazar párrafos de forma predecible.",
-                razonDefecto: "Transición mecánica", sugDefecto: "Omitir si el contraste o la continuidad ya son evidentes en el texto.",
+                nombre: "Conectores IA", colorClase: "cat-conector", colorHex: "#3b82f6",
+                desc: "Transiciones mecánicas sobreutilizadas.",
+                razonDefecto: "Transición mecánica", sugDefecto: "Omitir si el contraste ya es evidente.",
                 palabras: ["asimismo", "adicionalmente", "en este sentido", "por consiguiente", "dicho esto", "sin embargo", "por lo tanto", "además", "por otra parte", "en consecuencia", "de igual manera", "bajo este contexto", "en tal sentido", "al respecto", "por medio de", "en respuesta", "para finalizar"]
             },
             adjetivo: {
-                nombre: "Adjetivos Vacíos", colorClase: "cat-adjetivo",
-                desc: "Modificadores excesivamente dramáticos o pretenciosos típicos de LLMs.",
+                nombre: "Adjetivos Vacíos", colorClase: "cat-adjetivo", colorHex: "#f97316",
+                desc: "Modificadores excesivamente dramáticos típicos de LLMs.",
                 razonDefecto: "Adjetivo pretencioso", sugDefecto: "Usar un adjetivo más preciso o eliminar.",
                 palabras: ["crucial", "vibrante", "fascinante", "innegable", "multifacético", "intrincado", "trascendental", "vital", "imprescindible", "significativo", "notable", "relevante", "profundo", "invaluable", "excepcional", "integral", "eficiente", "innovadora"]
             },
             cliche: {
-                nombre: "Clichés IA", colorClase: "cat-cliche",
-                desc: "Metáforas y fórmulas de apertura/cierre genéricas y algorítmicas.",
+                nombre: "Clichés IA", colorClase: "cat-cliche", colorHex: "#ec4899",
+                desc: "Metáforas algorítmicas de apertura/cierre.",
                 razonDefecto: "Fórmula algorítmica", sugDefecto: "Reescribir usando tu propia voz.",
                 palabras: ["a lo largo de la historia", "en el tejido de", "un tapiz de", "navegar por las complejidades", "en última instancia", "el panorama actual", "es un testimonio de", "un crisol de", "arrojar luz sobre", "el corazón de", "en un mundo cada vez más", "juega un papel", "es imperativo comprender", "garantizando en todo momento", "buscando garantizar"]
             },
             tic: {
-                nombre: "Tics Robóticos", colorClase: "cat-tic",
-                desc: "Estructuras sintácticas rígidas e iterativas (oraciones balanceadas).",
+                nombre: "Tics Robóticos", colorClase: "cat-tic", colorHex: "#a855f7",
+                desc: "Estructuras sintácticas rígidas e iterativas.",
                 razonDefecto: "Estructura iterativa", sugDefecto: "Romper la simetría de la oración.",
                 palabras: ["no solo", "sino también", "ya sea", "tanto... como", "por un lado", "por otro lado", "si bien es cierto que", "es evidente que", "resulta innegable que", "a pesar de que", "independientemente de", "lo cual", "los cuales"]
             },
             erudicion: {
-                nombre: "Falsa Erudición", colorClase: "cat-erudicion",
-                desc: "Jerga académica comodín usada para aparentar mayor profundidad intelectual.",
+                nombre: "Falsa Erudición", colorClase: "cat-erudicion", colorHex: "#10b981",
+                desc: "Jerga comodín usada para aparentar profundidad.",
                 razonDefecto: "Comodín académico", sugDefecto: "Aterrizar el concepto con palabras más sencillas.",
                 palabras: ["paradigma", "holístico", "sinergia", "amalgama", "vanguardia", "epistemológico", "ontológico", "menester", "subyacente", "intrínseco", "extrínseco", "dicotomía", "hegemonía", "empírico", "convergencia", "probidad", "trazabilidad", "interoperabilidad"]
             }
         };
 
         const paper = document.getElementById('paper');
-        const themeToggle = document.getElementById('themeToggle');
-        const accordionContainer = document.getElementById('dynamic-accordion');
+        const editorContainer = document.getElementById('editor-container');
+        const heatmap = document.getElementById('heatmap-container');
         const tooltip = document.getElementById('smart-tooltip');
-        
-        // Modo Noche
-        themeToggle.addEventListener('click', () => {
-            const isDark = document.body.getAttribute('data-theme') === 'dark';
-            document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+        let currentTargetMarkId = null;
+
+        // UI toggles
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            document.body.setAttribute('data-theme', document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
         });
 
-        // Importar Word (Mammoth.js)
-        document.getElementById('uploadDoc').addEventListener('change', function(event) {
+        document.getElementById('uploadDoc').addEventListener('change', function(e) {
             const reader = new FileReader();
-            reader.onload = function(loadEvent) {
-                mammoth.convertToHtml({arrayBuffer: loadEvent.target.result})
-                    .then(r => paper.innerHTML = r.value || "<p>Documento vacío.</p>")
-                    .catch(e => alert("Error al leer Word."));
-            };
+            reader.onload = e => mammoth.convertToHtml({arrayBuffer: e.target.result}).then(r => paper.innerHTML = r.value || "<p>Vacío.</p>");
             reader.readAsArrayBuffer(this.files[0]);
         });
 
-        // Copiar Limpio
         document.getElementById('btnClean').addEventListener('click', () => {
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = paper.innerHTML;
-            tempDiv.querySelectorAll('mark').forEach(m => m.replaceWith(document.createTextNode(m.textContent)));
-            navigator.clipboard.writeText(tempDiv.innerText).then(() => alert("Texto limpio copiado."));
+            const temp = document.createElement('div'); temp.innerHTML = paper.innerHTML;
+            temp.querySelectorAll('mark').forEach(m => m.replaceWith(document.createTextNode(m.textContent)));
+            navigator.clipboard.writeText(temp.innerText).then(() => alert("Texto limpio copiado al portapapeles."));
         });
 
-        // Lógica del Tooltip Flotante
+        // Tooltip y Scroll
         paper.addEventListener('mouseover', (e) => {
             if(e.target.tagName === 'MARK') {
+                currentTargetMarkId = e.target.id;
                 document.getElementById('tt-razon').innerText = e.target.dataset.razon;
                 document.getElementById('tt-sugerencia').innerText = e.target.dataset.sugerencia;
                 
                 const rect = e.target.getBoundingClientRect();
-                // Posicionar dinámicamente arriba del texto
-                tooltip.style.left = `${Math.max(10, rect.left + (rect.width/2) - 110)}px`;
-                tooltip.style.top = `${rect.top - tooltip.offsetHeight - 10}px`;
+                tooltip.style.left = `${Math.max(10, rect.left + (rect.width/2) - 120)}px`;
+                tooltip.style.top = `${rect.top - tooltip.offsetHeight - 15}px`;
                 tooltip.classList.add('show');
             }
         });
-        paper.addEventListener('mouseout', (e) => {
-            if(e.target.tagName === 'MARK') tooltip.classList.remove('show');
+        
+        // Mantener el tooltip abierto si el mouse entra en él, cerrarlo si sale del area
+        document.addEventListener('mousemove', (e) => {
+            if(!e.target.closest('mark') && !e.target.closest('#smart-tooltip')) {
+                tooltip.classList.remove('show');
+            }
         });
 
-        // Hacer scroll suave hacia el ID
         window.scrollToMark = function(id) {
             const el = document.getElementById(id);
             if(el) {
                 el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                // Pequeño efecto visual para destacar a dónde saltó
-                el.style.outline = "2px solid red";
-                setTimeout(() => el.style.outline = "none", 1500);
+                el.style.outline = "2px solid red"; setTimeout(() => el.style.outline = "none", 1500);
             }
         };
 
-        // Lógica de Acordeón
-        window.toggleAccordion = function(catKey) {
-            document.querySelectorAll('.category-body').forEach(body => {
-                if(body.id === `body-${catKey}`) body.classList.toggle('active');
-                else body.classList.remove('active'); // Cierra los demás
-            });
+        window.toggleAccordion = function(key) {
+            document.querySelectorAll('.category-body').forEach(b => b.id === `body-${key}` ? b.classList.toggle('active') : b.classList.remove('active'));
         };
 
-        // Motor de Análisis Principal
-        document.getElementById('btnAnalyze').addEventListener('click', () => {
+        // IGNORAR HALLAZGO
+        document.getElementById('btn-ignore-action').addEventListener('click', () => {
+            if(!currentTargetMarkId) return;
+            const markEl = document.getElementById(currentTargetMarkId);
+            if(markEl) {
+                markEl.replaceWith(document.createTextNode(markEl.textContent)); // Unwraps the mark
+                tooltip.classList.remove('show');
+                // Ocultar del panel lateral visualmente (para no re-analizar todo el texto de nuevo)
+                const sideItem = document.getElementById(`side-${currentTargetMarkId}`);
+                if(sideItem) sideItem.style.display = 'none';
+                // Ocultar del minimapa
+                const heatTick = document.getElementById(`heat-${currentTargetMarkId}`);
+                if(heatTick) heatTick.style.display = 'none';
+            }
+        });
+
+        // Async Yielding Helper
+        const yieldToMain = () => new Promise(r => setTimeout(r, 0));
+
+        // Motor Principal (Async)
+        document.getElementById('btnAnalyze').addEventListener('click', async () => {
+            const btn = document.getElementById('btnAnalyze');
+            const loader = document.getElementById('loader');
+            btn.disabled = true; loader.style.display = 'block';
+
+            await yieldToMain(); // Permitir que la UI actualice el botón y el loader
+
             let htmlContent = paper.innerHTML;
-            htmlContent = htmlContent.replace(/<mark[^>]*>(.*?)<\/mark>/gi, "$1"); // Limpiar
+            htmlContent = htmlContent.replace(/<mark[^>]*>(.*?)<\/mark>/gi, "$1"); // Limpiar previas
 
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = htmlContent;
+            const tempDiv = document.createElement('div'); tempDiv.innerHTML = htmlContent;
             const plainText = tempDiv.innerText;
-            const totalWords = plainText.trim().split(/\s+/).filter(w => w.length > 0).length;
-            if(totalWords === 0) return;
-
-            // Cadencia Robótica
-            const pLengths = plainText.split('\n').filter(p => p.trim().length > 0).map(p => p.trim().split(/\s+/).length).filter(l => l >= 10);
-            if(pLengths.length > 3) {
-                const mean = pLengths.reduce((a, b) => a + b, 0) / pLengths.length;
-                const stdDev = Math.sqrt(pLengths.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / pLengths.length);
-                document.getElementById('cadenceAlert').style.display = stdDev < 12 ? 'block' : 'none';
-            } else {
-                document.getElementById('cadenceAlert').style.display = 'none';
+            const words = plainText.trim().split(/\s+/).filter(w => w.length > 0);
+            const totalWords = words.length;
+            
+            if(totalWords === 0) {
+                btn.disabled = false; loader.style.display = 'none'; return;
             }
+
+            // Métrica 1: Riqueza Léxica (Type-Token Ratio)
+            const uniqueWords = new Set(words.map(w => w.toLowerCase().replace(/[.,()]/g, ''))).size;
+            const ttr = uniqueWords / totalWords;
+            document.getElementById('ttrAlert').style.display = (totalWords > 50 && ttr < 0.40) ? 'block' : 'none';
+
+            // Métrica 2 & 3: Cadencia (Párrafos y Oraciones)
+            const stdDev = (arr) => {
+                const m = arr.reduce((a, b) => a + b, 0) / arr.length;
+                return Math.sqrt(arr.reduce((a, b) => a + Math.pow(b - m, 2), 0) / arr.length);
+            };
+
+            const pLengths = plainText.split('\n').filter(p => p.trim().length > 0).map(p => p.trim().split(/\s+/).length).filter(l => l >= 10);
+            document.getElementById('cadenceAlert').style.display = (pLengths.length > 3 && stdDev(pLengths) < 12) ? 'block' : 'none';
+
+            const sentences = plainText.split(/[.?!]/).map(s => s.trim().split(/\s+/).length).filter(l => l >= 5);
+            document.getElementById('sentenceAlert').style.display = (sentences.length > 5 && stdDev(sentences) < 5) ? 'block' : 'none';
 
             let totalMatches = 0;
             let accordionHTML = '';
             let instanceCounter = 0;
 
-            // Procesar RegEx e Inyectar Datos
+            // Procesamiento Asíncrono por Categorías
             for (const [key, data] of Object.entries(categoriesData)) {
                 let catMatches = [];
                 const sortedPhrases = data.palabras.sort((a, b) => b.length - a.length);
@@ -295,36 +345,47 @@
                         const markId = `mark-${key}-${instanceCounter}`;
                         catMatches.push({ word: match, id: markId });
                         totalMatches++;
-                        // Inyectamos el ID, la clase de color y los atributos de datos para el tooltip
                         return `<mark id="${markId}" class="mark-${key}" data-razon="${data.razonDefecto}" data-sugerencia="${data.sugDefecto}">${match}</mark>`;
                     });
                 });
 
-                // Construir HTML del Acordeón para esta categoría
                 accordionHTML += `
                     <div class="category-header ${data.colorClase}" onclick="toggleAccordion('${key}')">
-                        <span>${data.nombre}</span>
-                        <span>${catMatches.length}</span>
+                        <span>${data.nombre}</span><span>${catMatches.length}</span>
                     </div>
                     <div class="category-body" id="body-${key}">
                         <div class="cat-desc">${data.desc}</div>
                 `;
                 
-                if(catMatches.length === 0) {
-                    accordionHTML += `<div style="font-size:0.8rem; color:gray;">No se encontraron patrones.</div>`;
-                } else {
-                    catMatches.forEach(m => {
-                        accordionHTML += `<div class="finding-instance ${data.colorClase}" onclick="scrollToMark('${m.id}')">🔍 "${m.word}"</div>`;
-                    });
-                }
+                if(catMatches.length === 0) accordionHTML += `<div style="font-size:0.8rem; color:gray;">0 hallazgos.</div>`;
+                else catMatches.forEach(m => {
+                    accordionHTML += `<div id="side-${m.id}" class="finding-instance ${data.colorClase}" onclick="scrollToMark('${m.id}')"><span>"${m.word}"</span> <span>→</span></div>`;
+                });
                 accordionHTML += `</div>`;
+                
+                await yieldToMain(); // Respirar entre categorías para evitar congelar el navegador
             }
 
+            // Renderizar DOM Principal
             paper.innerHTML = htmlContent;
-            accordionContainer.innerHTML = accordionHTML;
+            document.getElementById('dynamic-accordion').innerHTML = accordionHTML;
+            document.getElementById('densityMetric').innerText = `${Math.min(100, ((totalMatches * 1.5) / totalWords) * 100).toFixed(1)}%`;
 
-            const density = Math.min(100, ((totalMatches * 1.5) / totalWords) * 100).toFixed(1);
-            document.getElementById('densityMetric').innerText = `${density}%`;
+            await yieldToMain(); // Respirar antes de pintar el Heatmap
+
+            // Renderizar Heatmap (Minimapa)
+            let heatmapHTML = '';
+            const paperHeight = paper.scrollHeight;
+            document.querySelectorAll('mark').forEach(mark => {
+                const topPercent = (mark.offsetTop / paperHeight) * 100;
+                const catKey = mark.className.replace('mark-', '');
+                const color = categoriesData[catKey].colorHex;
+                heatmapHTML += `<div id="heat-${mark.id}" class="heat-tick" style="top: ${topPercent}%; background-color: ${color};" onclick="scrollToMark('${mark.id}')" title="Ir al hallazgo"></div>`;
+            });
+            heatmap.innerHTML = heatmapHTML;
+
+            // Finalizar carga
+            btn.disabled = false; loader.style.display = 'none';
         });
     </script>
 </body>
