@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Humanizer AI Dashboard v.2026.1 (Aggressive)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f4f4f9;
+            --text-color: #333333;
+            --paper-bg: #ffffff;
+            --sidebar-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            /* Highlight Colors */
+            --c-grasa: #fef08a; /* Yellow */
+            --c-conector: #bfdbfe; /* Blue */
+            --c-adjetivo: #fed7aa; /* Orange */
+            --c-cliche: #fbcfe8; /* Pink */
+            --c-tic: #e9d5ff; /* Purple */
+            --c-erudicion: #a7f3d0; /* Emerald */
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #0f172a;
+            --text-color: #e2e8f0;
+            --paper-bg: #1e293b;
+            --sidebar-bg: #1e293b;
+            --border-color: #334155;
+            --c-grasa: #854d0e; 
+            --c-conector: #1e3a8a; 
+            --c-adjetivo: #9a3412; 
+            --c-cliche: #831843; 
+            --c-tic: #581c87; 
+            --c-erudicion: #065f46; 
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); transition: 0.3s; }
+        
+        header { padding: 1rem 2rem; background: var(--sidebar-bg); border-bottom: 1px solid var(--border-color); display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; }
+        h1 { font-size: 1.2rem; font-weight: 600; }
+        
+        .controls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+        button, label.btn { background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: 0.2s; display: inline-block; }
+        button:hover, label.btn:hover { background: var(--primary-hover); }
+        .btn-secondary { background: transparent; color: var(--text-color); border: 1px solid var(--border-color); }
+        .btn-secondary:hover { background: var(--border-color); }
+        input[type="file"] { display: none; }
+
+        .layout { display: flex; flex-direction: column; min-height: calc(100vh - 70px); }
+        
+        #sidebar { background: var(--sidebar-bg); border-right: 1px solid var(--border-color); padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
+        .metric-card { background: var(--bg-color); padding: 1rem; border-radius: 8px; text-align: center; }
+        .metric-value { font-size: 2rem; font-weight: 600; color: var(--primary); }
+        
+        .findings-list { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+        .finding-item { display: flex; justify-content: space-between; padding: 0.5rem; border-radius: 4px; font-size: 0.9rem; cursor: pointer; }
+        
+        /* Legend markers */
+        .cat-grasa { border-left: 4px solid #eab308; }
+        .cat-conector { border-left: 4px solid #3b82f6; }
+        .cat-adjetivo { border-left: 4px solid #f97316; }
+        .cat-cliche { border-left: 4px solid #ec4899; }
+        .cat-tic { border-left: 4px solid #a855f7; }
+        .cat-erudicion { border-left: 4px solid #10b981; }
+
+        .alert-box { display: none; background: #fee2e2; color: #991b1b; padding: 0.8rem; border-radius: 6px; font-size: 0.85rem; border: 1px solid #f87171; }
+        [data-theme="dark"] .alert-box { background: #7f1d1d; color: #fecaca; border-color: #991b1b; }
+
+        #editor-container { flex: 1; padding: 2rem; overflow-y: auto; display: flex; justify-content: center; }
+        #paper { background: var(--paper-bg); width: 100%; max-width: 800px; min-height: 800px; padding: 4rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); font-size: 1.1rem; line-height: 2; outline: none; border-radius: 4px; }
+        
+        mark { border-radius: 3px; padding: 0 0.2rem; cursor: pointer; transition: opacity 0.2s; }
+        mark:hover { opacity: 0.8; }
+        .mark-grasa { background-color: var(--c-grasa); }
+        .mark-conector { background-color: var(--c-conector); }
+        .mark-adjetivo { background-color: var(--c-adjetivo); }
+        .mark-cliche { background-color: var(--c-cliche); }
+        .mark-tic { background-color: var(--c-tic); }
+        .mark-erudicion { background-color: var(--c-erudicion); }
+
+        @media (min-width: 768px) {
+            .layout { flex-direction: row; }
+            #sidebar { width: 300px; height: calc(100vh - 70px); overflow-y: auto; }
+            #editor-container { height: calc(100vh - 70px); }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Humanizer AI v.2026.1</h1>
+        <div class="controls">
+            <button id="themeToggle" class="btn-secondary">Modo Noche</button>
+            <label class="btn btn-secondary">
+                Importar .docx <input type="file" id="uploadDoc" accept=".docx">
+            </label>
+            <button id="btnClean" class="btn-secondary">Copiar Limpio</button>
+            <button id="btnAnalyze">Analizar Texto</button>
+        </div>
+    </header>
+
+    <div class="layout">
+        <aside id="sidebar">
+            <div class="metric-card">
+                <h3>Densidad IA</h3>
+                <div class="metric-value" id="densityMetric">0%</div>
+                <small>Hallazgos / Palabras</small>
+            </div>
+
+            <div class="alert-box" id="cadenceAlert">
+                <strong>⚠️ Cadencia Robótica Detectada:</strong> Los párrafos tienen una longitud excesivamente simétrica (Baja Desviación Estándar). Típico de IA.
+            </div>
+
+            <div>
+                <h3 style="margin-bottom: 1rem; font-size: 1rem;">Hallazgos por Categoría</h3>
+                <ul class="findings-list">
+                    <li class="finding-item cat-grasa">Grasa Verbal <span id="count-grasa">0</span></li>
+                    <li class="finding-item cat-conector">Conectores IA <span id="count-conector">0</span></li>
+                    <li class="finding-item cat-adjetivo">Adjetivos Vacíos <span id="count-adjetivo">0</span></li>
+                    <li class="finding-item cat-cliche">Clichés IA <span id="count-cliche">0</span></li>
+                    <li class="finding-item cat-tic">Tics Robóticos <span id="count-tic">0</span></li>
+                    <li class="finding-item cat-erudicion">Falsa Erudición <span id="count-erudicion">0</span></li>
+                </ul>
+            </div>
+        </aside>
+
+        <section id="editor-container">
+            <div id="paper" contenteditable="true">
+                <p>Pega tu texto aquí o importa un documento Word (.docx) para comenzar el análisis.</p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // 1. Diccionario de Patrones (Full Agresivo v.2026.1)
+        const dict = {
+            grasa: [
+                "cabe destacar que", "es importante señalar", "es fundamental", "resulta imperativo", 
+                "como se mencionó anteriormente", "el presente informe", "el presente trabajo", 
+                "en conclusión", "a modo de resumen", "es preciso indicar", "se puede observar que", 
+                "es necesario recalcar", "conviene subrayar", "hay que tener en cuenta", 
+                "no se puede dejar de lado", "es de suma importancia", "pone el foco", "en otras palabras"
+            ],
+            conector: [
+                "asimismo", "adicionalmente", "en este sentido", "por consiguiente", "dicho esto", 
+                "sin embargo", "por lo tanto", "además", "por otra parte", "en consecuencia", 
+                "de igual manera", "bajo este contexto", "en tal sentido", "al respecto", 
+                "por medio de", "en respuesta", "para finalizar"
+            ],
+            adjetivo: [
+                "crucial", "vibrante", "fascinante", "innegable", "multifacético", "intrincado", 
+                "trascendental", "vital", "imprescindible", "significativo", "notable", "relevante", 
+                "profundo", "invaluable", "excepcional", "integral", "eficiente", "innovadora"
+            ],
+            cliche: [
+                "a lo largo de la historia", "en el tejido de", "un tapiz de", "navegar por las complejidades", 
+                "en última instancia", "el panorama actual", "es un testimonio de", "un crisol de", 
+                "arrojar luz sobre", "el corazón de", "en un mundo cada vez más", "juega un papel", 
+                "es imperativo comprender", "garantizando en todo momento", "buscando garantizar"
+            ],
+            tic: [
+                "no solo", "sino también", "ya sea", "tanto... como", "por un lado", "por otro lado", 
+                "si bien es cierto que", "es evidente que", "resulta innegable que", "a pesar de que", 
+                "independientemente de", "lo cual", "los cuales"
+            ],
+            erudicion: [
+                "paradigma", "holístico", "sinergia", "amalgama", "vanguardia", "epistemológico", 
+                "ontológico", "menester", "subyacente", "intrínseco", "extrínseco", "dicotomía", 
+                "hegemonía", "empírico", "convergencia", "probidad", "trazabilidad", "interoperabilidad"
+            ]
+        };
+
+        const paper = document.getElementById('paper');
+        const themeToggle = document.getElementById('themeToggle');
+        
+        // 2. Modo Noche
+        themeToggle.addEventListener('click', () => {
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+        });
+
+        // 3. Importar Word (Mammoth.js)
+        document.getElementById('uploadDoc').addEventListener('change', function(event) {
+            const reader = new FileReader();
+            reader.onload = function(loadEvent) {
+                const arrayBuffer = loadEvent.target.result;
+                mammoth.convertToHtml({arrayBuffer: arrayBuffer})
+                    .then(displayResult)
+                    .catch(handleError);
+            };
+            reader.readAsArrayBuffer(this.files[0]);
+        });
+
+        function displayResult(result) {
+            paper.innerHTML = result.value || "<p>Documento vacío.</p>";
+        }
+        function handleError(err) {
+            console.error(err);
+            alert("Error al leer el archivo Word.");
+        }
+
+        // 4. Limpiar texto (Strip HTML) y copiar
+        document.getElementById('btnClean').addEventListener('click', () => {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = paper.innerHTML;
+            // Eliminar marcas
+            const marks = tempDiv.querySelectorAll('mark');
+            marks.forEach(mark => {
+                const text = document.createTextNode(mark.textContent);
+                mark.parentNode.replaceChild(text, mark);
+            });
+            
+            navigator.clipboard.writeText(tempDiv.innerText).then(() => {
+                alert("Texto limpio copiado al portapapeles.");
+            });
+        });
+
+        // 5. Motor de Análisis
+        document.getElementById('btnAnalyze').addEventListener('click', analyzeText);
+
+        function analyzeText() {
+            let htmlContent = paper.innerHTML;
+            // Limpiar marcas previas
+            htmlContent = htmlContent.replace(/<mark class="mark-[^>]+>(.*?)<\/mark>/gi, "$1");
+
+            // Extraer texto plano para contar palabras y párrafos
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlContent;
+            const plainText = tempDiv.innerText;
+            
+            const totalWords = plainText.trim().split(/\s+/).filter(word => word.length > 0).length;
+            if(totalWords === 0) return;
+
+            // Análisis de Cadencia (Varianza de longitud de párrafos - Actualizado)
+            const paragraphs = plainText.split('\n').filter(p => p.trim().length > 0);
+            // Filtramos viñetas o títulos (menos de 10 palabras)
+            const pLengths = paragraphs.map(p => p.trim().split(/\s+/).length).filter(len => len >= 10);
+            
+            if(pLengths.length > 3) {
+                const mean = pLengths.reduce((a, b) => a + b, 0) / pLengths.length;
+                const variance = pLengths.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / pLengths.length;
+                const stdDev = Math.sqrt(variance);
+                
+                // Umbral más agresivo (< 12)
+                document.getElementById('cadenceAlert').style.display = stdDev < 12 ? 'block' : 'none';
+            } else {
+                document.getElementById('cadenceAlert').style.display = 'none';
+            }
+
+            let totalMatches = 0;
+            const counts = { grasa: 0, conector: 0, adjetivo: 0, cliche: 0, tic: 0, erudicion: 0 };
+
+            // Reemplazo seguro usando regex (Ignora atributos HTML)
+            for (const [category, phrases] of Object.entries(dict)) {
+                // Ordenar por longitud descendente para evitar sub-coincidencias
+                const sortedPhrases = phrases.sort((a, b) => b.length - a.length);
+                
+                sortedPhrases.forEach(phrase => {
+                    // Lookaround regex para no reemplazar texto dentro de tags HTML ya formados
+                    const regex = new RegExp(`(?<!<[^>]*)\\b(${phrase})\\b(?![^<]*>)`, 'gi');
+                    
+                    const matches = htmlContent.match(regex);
+                    if(matches) {
+                        counts[category] += matches.length;
+                        totalMatches += matches.length;
+                        htmlContent = htmlContent.replace(regex, `<mark class="mark-${category}">$1</mark>`);
+                    }
+                });
+            }
+
+            paper.innerHTML = htmlContent;
+
+            // Actualizar Dashboard
+            document.getElementById('count-grasa').innerText = counts.grasa;
+            document.getElementById('count-conector').innerText = counts.conector;
+            document.getElementById('count-adjetivo').innerText = counts.adjetivo;
+            document.getElementById('count-cliche').innerText = counts.cliche;
+            document.getElementById('count-tic').innerText = counts.tic;
+            document.getElementById('count-erudicion').innerText = counts.erudicion;
+
+            // Fórmula: Densidad IA (%) = (Palabras Detectadas estimadas / Total Palabras) * 100
+            // Usamos totalMatches, asumiendo promedio de 2 palabras por hallazgo como peso aproximado.
+            const density = Math.min(100, ((totalMatches * 1.5) / totalWords) * 100).toFixed(1);
+            document.getElementById('densityMetric').innerText = `${density}%`;
+        }
+    </script>
+</body>
+</html>
