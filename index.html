@@ -3,41 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Humanizer AI Dashboard v.3.0 (Enterprise)</title>
+    <title>Humanizer AI Dashboard v.4.0 (Heuristic Parser)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
     <style>
         :root {
-            --bg-color: #f4f4f9;
-            --text-color: #333333;
+            --bg-color: #f8fafc;
+            --text-color: #334155;
             --paper-bg: #ffffff;
             --sidebar-bg: #ffffff;
             --border-color: #e2e8f0;
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            /* Highlight Colors */
-            --c-grasa: #fef08a; 
-            --c-conector: #bfdbfe; 
-            --c-adjetivo: #fed7aa; 
-            --c-cliche: #fbcfe8; 
-            --c-tic: #e9d5ff; 
-            --c-erudicion: #a7f3d0; 
-            --c-primera: #fecaca; /* Red/Rose para 1ra persona */
+            --primary: #0f172a;
+            --primary-hover: #334155;
+            
+            /* Paleta Heurística Extendida */
+            --c-inicio: #bfdbfe;       /* Blue 200 */
+            --c-continuacion: #99f6e4; /* Teal 200 */
+            --c-explicacion: #fef08a;  /* Yellow 200 */
+            --c-consecuencia: #fed7aa; /* Orange 200 */
+            --c-cierre: #fecaca;       /* Red 200 */
+            
+            --c-estructural: #e9d5ff;  /* Purple 200 */
+            --c-sobreesp: #fbcfe8;     /* Pink 200 */
+            --c-neutralidad: #e2e8f0;  /* Slate 200 */
+            --c-impersonal: #d9f99d;   /* Lime 200 */
+            --c-precision: #bae6fd;    /* Sky 200 */
+            --c-primera: #fca5a5;      /* Red 300 */
         }
 
         [data-theme="dark"] {
             --bg-color: #0f172a;
-            --text-color: #e2e8f0;
+            --text-color: #f1f5f9;
             --paper-bg: #1e293b;
             --sidebar-bg: #1e293b;
             --border-color: #334155;
-            --c-grasa: #ca8a04; 
-            --c-conector: #2563eb; 
-            --c-adjetivo: #ea580c; 
-            --c-cliche: #db2777; 
-            --c-tic: #9333ea; 
-            --c-erudicion: #059669; 
-            --c-primera: #b91c1c;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            
+            --c-inicio: #1e3a8a;
+            --c-continuacion: #115e59;
+            --c-explicacion: #854d0e;
+            --c-consecuencia: #9a3412;
+            --c-cierre: #7f1d1d;
+            --c-estructural: #581c87;
+            --c-sobreesp: #831843;
+            --c-neutralidad: #334155;
+            --c-impersonal: #3f6212;
+            --c-precision: #075985;
+            --c-primera: #991b1b;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -46,7 +59,6 @@
         header { padding: 1rem 2rem; background: var(--sidebar-bg); border-bottom: 1px solid var(--border-color); display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; z-index: 10; position: relative; }
         h1 { font-size: 1.2rem; font-weight: 600; display: flex; align-items: center; gap: 10px;}
         
-        /* Spinner de Carga */
         .loader { display: none; width: 18px; height: 18px; border: 2px solid var(--primary); border-bottom-color: transparent; border-radius: 50%; animation: rotation 1s linear infinite; }
         @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
@@ -60,49 +72,47 @@
 
         .layout { display: flex; flex-direction: row; height: calc(100vh - 70px); }
         
-        #sidebar { width: 340px; background: var(--sidebar-bg); border-right: 1px solid var(--border-color); padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; }
-        .metric-card { background: var(--bg-color); padding: 1rem; border-radius: 8px; text-align: center; }
-        .metric-value { font-size: 2rem; font-weight: 600; color: var(--primary); }
+        #sidebar { width: 360px; background: var(--sidebar-bg); border-right: 1px solid var(--border-color); padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; }
+        
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+        .metric-card { background: var(--bg-color); padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid var(--border-color); }
+        .metric-value { font-size: 1.8rem; font-weight: 600; color: var(--primary); margin-top: 0.5rem; }
+        .metric-card h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; }
         
         .alert-box { display: none; background: #fee2e2; color: #991b1b; padding: 0.8rem; border-radius: 6px; font-size: 0.8rem; border: 1px solid #f87171; line-height: 1.4; }
         [data-theme="dark"] .alert-box { background: #7f1d1d; color: #fecaca; border-color: #991b1b; }
         .alert-warning { background: #fef9c3; color: #854d0e; border-color: #facc15; }
         [data-theme="dark"] .alert-warning { background: #422006; color: #fef08a; border-color: #ca8a04; }
 
-        /* Categorías y Acordeón */
-        .cat-grasa { border-left: 4px solid #eab308; } .mark-grasa { background-color: var(--c-grasa); }
-        .cat-conector { border-left: 4px solid #3b82f6; } .mark-conector { background-color: var(--c-conector); }
-        .cat-adjetivo { border-left: 4px solid #f97316; } .mark-adjetivo { background-color: var(--c-adjetivo); }
-        .cat-cliche { border-left: 4px solid #ec4899; } .mark-cliche { background-color: var(--c-cliche); }
-        .cat-tic { border-left: 4px solid #a855f7; } .mark-tic { background-color: var(--c-tic); }
-        .cat-erudicion { border-left: 4px solid #10b981; } .mark-erudicion { background-color: var(--c-erudicion); }
-        .cat-primera { border-left: 4px solid #ef4444; } .mark-primera { background-color: var(--c-primera); }
-
-        .category-header { display: flex; justify-content: space-between; padding: 0.8rem; border-radius: 4px; font-size: 0.95rem; cursor: pointer; font-weight: 600; background: var(--bg-color); transition: 0.2s; border: 1px solid transparent; margin-bottom: 0.2rem; }
+        /* Estilos de Categorías Dinámicas (CSS generado por JS simplificado) */
+        .category-header { display: flex; justify-content: space-between; padding: 0.8rem; border-radius: 4px; font-size: 0.9rem; cursor: pointer; font-weight: 600; background: var(--bg-color); transition: 0.2s; border: 1px solid transparent; margin-bottom: 0.2rem; }
         .category-header:hover { border-color: var(--border-color); filter: brightness(0.95); }
         .category-body { display: none; padding: 0.5rem 0.5rem 1rem 0.5rem; flex-direction: column; gap: 0.5rem; }
         .category-body.active { display: flex; }
         .cat-desc { font-size: 0.8rem; color: #64748b; margin-bottom: 0.5rem; font-style: italic; }
-        .finding-instance { font-size: 0.85rem; padding: 0.4rem 0.6rem; background: var(--bg-color); border-radius: 4px; cursor: pointer; transition: 0.2s; border-left: 3px solid transparent; color: var(--text-color); display: flex; justify-content: space-between;}
+        .finding-instance { font-size: 0.8rem; padding: 0.4rem 0.6rem; background: var(--bg-color); border-radius: 4px; cursor: pointer; transition: 0.2s; border-left: 3px solid transparent; color: var(--text-color); display: flex; justify-content: space-between;}
         .finding-instance:hover { filter: brightness(0.9); transform: translateX(2px); }
 
-        /* Editor y Heatmap */
         #main-view { flex: 1; display: flex; position: relative; overflow: hidden; }
         #editor-container { flex: 1; padding: 2rem; overflow-y: auto; display: flex; justify-content: center; scroll-behavior: smooth; }
-        #paper { background: var(--paper-bg); width: 100%; max-width: 800px; min-height: 800px; padding: 4rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); font-size: 1.1rem; line-height: 2; outline: none; border-radius: 4px; }
+        #paper { background: var(--paper-bg); width: 100%; max-width: 850px; min-height: 800px; padding: 4rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); font-size: 1.1rem; line-height: 2; outline: none; border-radius: 4px; }
+        
         mark { border-radius: 3px; padding: 0 0.2rem; cursor: pointer; transition: opacity 0.2s; color: inherit; }
         mark:hover { opacity: 0.8; outline: 1px dashed var(--text-color); }
+        
+        /* ALERTA DE PATRÓN I+E+C */
+        .iec-pattern-alert { background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 0.5rem 1rem; border-radius: 0 4px 4px 0; margin-bottom: 1rem; transition: 0.3s; }
+        [data-theme="dark"] .iec-pattern-alert { background-color: #451a03; border-color: #d97706; }
         
         #heatmap-container { width: 24px; background: var(--sidebar-bg); border-left: 1px solid var(--border-color); position: relative; }
         .heat-tick { position: absolute; width: 100%; height: 4px; opacity: 0.7; cursor: pointer; }
         .heat-tick:hover { opacity: 1; transform: scaleY(1.5); }
 
-        /* Tooltip */
-        #smart-tooltip { position: fixed; opacity: 0; pointer-events: none; transition: opacity 0.2s; background: var(--paper-bg); border: 1px solid var(--border-color); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 1rem; border-radius: 8px; z-index: 1000; width: 240px; }
+        #smart-tooltip { position: fixed; opacity: 0; pointer-events: none; transition: opacity 0.2s; background: var(--paper-bg); border: 1px solid var(--border-color); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 1rem; border-radius: 8px; z-index: 1000; width: 280px; }
         #smart-tooltip.show { opacity: 1; pointer-events: auto; }
-        .tt-razon { font-size: 0.8rem; font-weight: 600; color: #ef4444; margin-bottom: 0.4rem; text-transform: uppercase; }
-        .tt-sugerencia { font-size: 0.85rem; color: var(--text-color); margin-bottom: 0.8rem; line-height: 1.4; }
-        .btn-ignore { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 0.3rem 0.6rem; font-size: 0.75rem; width: 100%; text-align: center; }
+        .tt-razon { font-size: 0.75rem; font-weight: 700; color: #ef4444; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.5px;}
+        .tt-sugerencia { font-size: 0.85rem; color: var(--text-color); margin-bottom: 0.8rem; line-height: 1.5; }
+        .btn-ignore { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 0.4rem; font-size: 0.75rem; width: 100%; text-align: center; font-weight: 600;}
         .btn-ignore:hover { background: #e2e8f0; color: #0f172a; }
         [data-theme="dark"] .btn-ignore { background: #334155; color: #cbd5e1; border-color: #475569; }
 
@@ -116,39 +126,41 @@
 <body>
 
     <header>
-        <h1>Humanizer AI v.3.0 <div class="loader" id="loader"></div></h1>
+        <h1>Humanizer AI v.4.0 <span style="font-size:0.8rem; font-weight:400; color:#64748b;">(Stylistic Parser)</span> <div class="loader" id="loader"></div></h1>
         <div class="controls">
             <button id="themeToggle" class="btn-secondary">Modo Noche</button>
             <label class="btn btn-secondary">
                 Importar .docx <input type="file" id="uploadDoc" accept=".docx">
             </label>
             <button id="btnClean" class="btn-secondary">Exportar Limpio</button>
-            <button id="btnAnalyze">Analizar Texto</button>
+            <button id="btnAnalyze">Analizar Heurística</button>
         </div>
     </header>
 
     <div class="layout">
         <aside id="sidebar">
-            <div class="metric-card">
-                <h3>Densidad IA</h3>
-                <div class="metric-value" id="densityMetric">0%</div>
-                <small>Hallazgos / Palabras</small>
+            <div class="dashboard-grid">
+                <div class="metric-card">
+                    <h3>Densidad IA</h3>
+                    <div class="metric-value" id="densityMetric">0%</div>
+                </div>
+                <div class="metric-card" title="100% es muy humano (caótico). 0% es robótico (predecible).">
+                    <h3>Imprevisibilidad</h3>
+                    <div class="metric-value" id="entropyMetric" style="color: #10b981;">100%</div>
+                </div>
             </div>
 
+            <div class="alert-box alert-warning" id="iecAlert">
+                <strong>⚠️ Alerta Estructural (I+E+C):</strong> Hay párrafos que siguen la fórmula predecible de IA (Idea + Explicación + Consecuencia).
+            </div>
             <div class="alert-box" id="cadenceAlert">
-                <strong>⚠️ Cadencia Robótica (Párrafos):</strong> Longitud excesivamente simétrica.
-            </div>
-            <div class="alert-box alert-warning" id="sentenceAlert">
-                <strong>⚠️ Sintaxis Monótona:</strong> Las oraciones miden casi lo mismo. Falta ritmo humano.
-            </div>
-            <div class="alert-box alert-warning" id="ttrAlert">
-                <strong>⚠️ Pobreza Léxica:</strong> El texto repite mucho el mismo vocabulario (TTR bajo).
+                <strong>⚠️ Cadencia Monótona:</strong> Longitud de oraciones o párrafos excesivamente simétrica.
             </div>
 
             <div id="accordion-container">
-                <h3 style="margin-bottom: 1rem; font-size: 1rem;">Detalle de Hallazgos</h3>
+                <h3 style="margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase; color: #64748b;">Desglose Léxico</h3>
                 <div id="dynamic-accordion">
-                    <p style="font-size:0.85rem; color:gray;">Analiza el texto para ver los detalles.</p>
+                    <p style="font-size:0.85rem; color:gray;">Ejecuta el análisis para visualizar los patrones.</p>
                 </div>
             </div>
         </aside>
@@ -159,8 +171,7 @@
                     <p>Pega tu texto aquí o importa un documento Word (.docx).</p>
                 </div>
             </div>
-            <div id="heatmap-container">
-                </div>
+            <div id="heatmap-container"></div>
         </section>
     </div>
 
@@ -171,59 +182,91 @@
     </div>
 
     <script>
-        // 1. Diccionario Estructurado (v.3.0) - Incluye Voz en 1ra Persona
+        // 1. Diccionario Heurístico Avanzado (v.4.0)
         const categoriesData = {
+            inicio: {
+                nombre: "Conectores de Inicio", varColor: "--c-inicio", colorHex: "#bfdbfe",
+                desc: "Estructuras de apertura de párrafo muy académicas.",
+                razonDefecto: "Apertura Predecible", sugDefecto: "Camuflaje: Entra directo al tema sin anunciar que vas a empezar. Ejemplo: En vez de 'Para comenzar, los datos...', usa 'Los datos muestran...'",
+                palabras: ["en primer lugar", "para comenzar", "en términos generales", "en este contexto", "en este sentido", "cabe destacar que"]
+            },
+            continuacion: {
+                nombre: "Conectores de Continuación", varColor: "--c-continuacion", colorHex: "#99f6e4",
+                desc: "Transiciones mecánicas para sumar ideas.",
+                razonDefecto: "Suma Mecánica", sugDefecto: "Camuflaje: Los humanos a veces saltan de idea sin conectar tan suavemente. Elimina el conector o usa un punto seguido.",
+                palabras: ["asimismo", "de igual manera", "del mismo modo", "por otra parte", "en segundo lugar", "además"]
+            },
+            explicacion: {
+                nombre: "Conectores de Explicación", varColor: "--c-explicacion", colorHex: "#fef08a",
+                desc: "Conectores que parafrasean lo ya dicho.",
+                razonDefecto: "Paráfrasis de IA", sugDefecto: "Camuflaje: Si la idea anterior era clara, no necesitas explicarla de nuevo. Ahorra palabras.",
+                palabras: ["es decir", "en otras palabras", "esto significa que", "lo que implica que"]
+            },
+            consecuencia: {
+                nombre: "Conectores de Consecuencia", varColor: "--c-consecuencia", colorHex: "#fed7aa",
+                desc: "Cierres lógicos sobreutilizados.",
+                razonDefecto: "Causalidad Algorítmica", sugDefecto: "Camuflaje: Transforma la consecuencia en una acción directa. Ej: 'Esto generó...' en lugar de 'Por lo tanto, se generó...'",
+                palabras: ["por lo tanto", "en consecuencia", "por consiguiente", "de ahí que"]
+            },
+            cierre: {
+                nombre: "Conectores de Cierre", varColor: "--c-cierre", colorHex: "#fecaca",
+                desc: "Fórmulas finales que los detectores escanean instantáneamente.",
+                razonDefecto: "Cierre Estereotipado", sugDefecto: "Camuflaje: Nunca uses 'En conclusión'. Termina el texto con la reflexión final directamente.",
+                palabras: ["en conclusión", "en resumen", "en síntesis", "en definitiva", "finalmente, es posible concluir que"]
+            },
+            estructural: {
+                nombre: "Frases Estructurales", varColor: "--c-estructural", colorHex: "#e9d5ff",
+                desc: "Muletillas organizativas para sonar didáctico.",
+                razonDefecto: "Tono Didáctico Artificial", sugDefecto: "Camuflaje: Elimina la frase. Ve directamente a la afirmación que quieres hacer.",
+                palabras: ["es importante destacar que", "es fundamental comprender que", "cabe señalar que", "conviene mencionar que", "resulta relevante considerar que", "vale la pena señalar que", "en este sentido, se puede afirmar que", "a partir de lo anterior", "desde esta perspectiva", "en el marco de"]
+            },
+            sobreesp: {
+                nombre: "Sobreespecificación", varColor: "--c-sobreesp", colorHex: "#fbcfe8",
+                desc: "Explicar lo obvio repetidamente.",
+                razonDefecto: "Redundancia Explicativa", sugDefecto: "Camuflaje: La IA teme que no la entiendas. Como humano, asume que tu lector es inteligente y omite esta frase.",
+                palabras: ["esto se debe a que", "esto ocurre porque", "esto implica que", "lo cual significa que", "lo cual permite entender que", "lo cual demuestra que"]
+            },
+            neutralidad: {
+                nombre: "Neutralidad Artificial", varColor: "--c-neutralidad", colorHex: "#e2e8f0",
+                desc: "Generalizaciones amplias para evitar especificidad.",
+                razonDefecto: "Falta de Especificidad", sugDefecto: "Camuflaje: Usa datos concretos o ejemplos locales (ej: 'En Chile durante 2023...') en lugar de 'En la actualidad'.",
+                palabras: ["en la actualidad", "en la sociedad contemporánea", "a lo largo del tiempo", "desde tiempos antiguos", "en diversos contextos", "en distintos ámbitos", "en múltiples ocasiones"]
+            },
+            impersonal: {
+                nombre: "Sintaxis Impersonal", varColor: "--c-impersonal", colorHex: "#d9f99d",
+                desc: "Evasión de responsabilidad en la afirmación.",
+                razonDefecto: "Escudo Académico", sugDefecto: "Camuflaje: Atrévete a afirmar los hechos. Ej: 'Los datos demuestran...' en lugar de 'Se ha demostrado que...'",
+                palabras: ["se puede observar que", "se puede afirmar que", "se puede considerar que", "se puede decir que", "se ha demostrado que", "se ha observado que"]
+            },
+            precision: {
+                nombre: "Precisión Artificial", varColor: "--c-precision", colorHex: "#bae6fd",
+                desc: "Adjetivos 'comodín' que suenan inteligentes pero son genéricos.",
+                razonDefecto: "Vocabulario Estándar", sugDefecto: "Camuflaje: Reemplázalo por un adjetivo más cotidiano o descriptivo.",
+                palabras: ["significativo", "relevante", "fundamental", "esencial", "crucial", "importante", "complejo", "dinámico", "diverso", "significativo impacto"]
+            },
             primera: {
-                nombre: "Voz en 1ra Persona", colorClase: "cat-primera", colorHex: "#ef4444",
-                desc: "Rompimiento del tono formal de 3ra persona.",
-                razonDefecto: "Subjetividad Académica", sugDefecto: "Cambiar a formato impersonal (ej: 'se analiza', 'se concluye').",
+                nombre: "Voz Personal", varColor: "--c-primera", colorHex: "#fca5a5",
+                desc: "Uso de 1ra persona, generalmente evitado por IAs pero penalizado en papers formales.",
+                razonDefecto: "Subjetividad", sugDefecto: "Sugerencia: Aunque es un rasgo muy humano, en la academia formal debes cambiar a tercera persona.",
                 palabras: ["yo", "nosotros", "nuestro", "nuestra", "nuestros", "nuestras", "creemos", "pensamos", "analizamos", "observamos", "concluimos", "en mi opinión", "mi perspectiva", "hemos"]
-            },
-            grasa: {
-                nombre: "Grasa Verbal", colorClase: "cat-grasa", colorHex: "#eab308",
-                desc: "Frases de relleno que diluyen el mensaje.",
-                razonDefecto: "Relleno innecesario", sugDefecto: "Eliminar o usar un verbo directo.",
-                palabras: ["cabe destacar que", "es importante señalar", "es fundamental", "resulta imperativo", "como se mencionó anteriormente", "el presente informe", "el presente trabajo", "en conclusión", "a modo de resumen", "es preciso indicar", "se puede observar que", "es necesario recalcar", "conviene subrayar", "hay que tener en cuenta", "no se puede dejar de lado", "es de suma importancia", "pone el foco", "en otras palabras"]
-            },
-            conector: {
-                nombre: "Conectores IA", colorClase: "cat-conector", colorHex: "#3b82f6",
-                desc: "Transiciones mecánicas sobreutilizadas.",
-                razonDefecto: "Transición mecánica", sugDefecto: "Omitir si el contraste ya es evidente.",
-                palabras: ["asimismo", "adicionalmente", "en este sentido", "por consiguiente", "dicho esto", "sin embargo", "por lo tanto", "además", "por otra parte", "en consecuencia", "de igual manera", "bajo este contexto", "en tal sentido", "al respecto", "por medio de", "en respuesta", "para finalizar"]
-            },
-            adjetivo: {
-                nombre: "Adjetivos Vacíos", colorClase: "cat-adjetivo", colorHex: "#f97316",
-                desc: "Modificadores excesivamente dramáticos típicos de LLMs.",
-                razonDefecto: "Adjetivo pretencioso", sugDefecto: "Usar un adjetivo más preciso o eliminar.",
-                palabras: ["crucial", "vibrante", "fascinante", "innegable", "multifacético", "intrincado", "trascendental", "vital", "imprescindible", "significativo", "notable", "relevante", "profundo", "invaluable", "excepcional", "integral", "eficiente", "innovadora"]
-            },
-            cliche: {
-                nombre: "Clichés IA", colorClase: "cat-cliche", colorHex: "#ec4899",
-                desc: "Metáforas algorítmicas de apertura/cierre.",
-                razonDefecto: "Fórmula algorítmica", sugDefecto: "Reescribir usando tu propia voz.",
-                palabras: ["a lo largo de la historia", "en el tejido de", "un tapiz de", "navegar por las complejidades", "en última instancia", "el panorama actual", "es un testimonio de", "un crisol de", "arrojar luz sobre", "el corazón de", "en un mundo cada vez más", "juega un papel", "es imperativo comprender", "garantizando en todo momento", "buscando garantizar"]
-            },
-            tic: {
-                nombre: "Tics Robóticos", colorClase: "cat-tic", colorHex: "#a855f7",
-                desc: "Estructuras sintácticas rígidas e iterativas.",
-                razonDefecto: "Estructura iterativa", sugDefecto: "Romper la simetría de la oración.",
-                palabras: ["no solo", "sino también", "ya sea", "tanto... como", "por un lado", "por otro lado", "si bien es cierto que", "es evidente que", "resulta innegable que", "a pesar de que", "independientemente de", "lo cual", "los cuales"]
-            },
-            erudicion: {
-                nombre: "Falsa Erudición", colorClase: "cat-erudicion", colorHex: "#10b981",
-                desc: "Jerga comodín usada para aparentar profundidad.",
-                razonDefecto: "Comodín académico", sugDefecto: "Aterrizar el concepto con palabras más sencillas.",
-                palabras: ["paradigma", "holístico", "sinergia", "amalgama", "vanguardia", "epistemológico", "ontológico", "menester", "subyacente", "intrínseco", "extrínseco", "dicotomía", "hegemonía", "empírico", "convergencia", "probidad", "trazabilidad", "interoperabilidad"]
             }
         };
 
+        // Inyectar CSS Dinámico para las marcas
+        let dynamicCSS = "";
+        for (const [key, data] of Object.entries(categoriesData)) {
+            dynamicCSS += `.mark-${key} { background-color: var(${data.varColor}); } .cat-${key} { border-left: 4px solid var(${data.varColor}); } `;
+        }
+        const styleSheet = document.createElement("style");
+        styleSheet.innerText = dynamicCSS;
+        document.head.appendChild(styleSheet);
+
         const paper = document.getElementById('paper');
-        const editorContainer = document.getElementById('editor-container');
-        const heatmap = document.getElementById('heatmap-container');
         const tooltip = document.getElementById('smart-tooltip');
         let currentTargetMarkId = null;
+        let tooltipTimeout;
 
-        // UI toggles
+        // UI toggles y Archivos
         document.getElementById('themeToggle').addEventListener('click', () => {
             document.body.setAttribute('data-theme', document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
         });
@@ -237,29 +280,32 @@
         document.getElementById('btnClean').addEventListener('click', () => {
             const temp = document.createElement('div'); temp.innerHTML = paper.innerHTML;
             temp.querySelectorAll('mark').forEach(m => m.replaceWith(document.createTextNode(m.textContent)));
-            navigator.clipboard.writeText(temp.innerText).then(() => alert("Texto limpio copiado al portapapeles."));
+            temp.querySelectorAll('.iec-pattern-alert').forEach(p => p.classList.remove('iec-pattern-alert'));
+            navigator.clipboard.writeText(temp.innerText).then(() => alert("Texto limpio exportado al portapapeles."));
         });
 
-        // Tooltip y Scroll
+        // Tooltip con DEBOUNCE
         paper.addEventListener('mouseover', (e) => {
             if(e.target.tagName === 'MARK') {
+                clearTimeout(tooltipTimeout);
                 currentTargetMarkId = e.target.id;
                 document.getElementById('tt-razon').innerText = e.target.dataset.razon;
                 document.getElementById('tt-sugerencia').innerText = e.target.dataset.sugerencia;
                 
                 const rect = e.target.getBoundingClientRect();
-                tooltip.style.left = `${Math.max(10, rect.left + (rect.width/2) - 120)}px`;
+                tooltip.style.left = `${Math.max(10, rect.left + (rect.width/2) - 140)}px`;
                 tooltip.style.top = `${rect.top - tooltip.offsetHeight - 15}px`;
                 tooltip.classList.add('show');
             }
         });
-        
-        // Mantener el tooltip abierto si el mouse entra en él, cerrarlo si sale del area
-        document.addEventListener('mousemove', (e) => {
-            if(!e.target.closest('mark') && !e.target.closest('#smart-tooltip')) {
-                tooltip.classList.remove('show');
+
+        paper.addEventListener('mouseout', (e) => {
+            if(e.target.tagName === 'MARK') {
+                tooltipTimeout = setTimeout(() => { tooltip.classList.remove('show'); }, 300);
             }
         });
+        tooltip.addEventListener('mouseover', () => clearTimeout(tooltipTimeout));
+        tooltip.addEventListener('mouseleave', () => { tooltipTimeout = setTimeout(() => { tooltip.classList.remove('show'); }, 300); });
 
         window.scrollToMark = function(id) {
             const el = document.getElementById(id);
@@ -273,67 +319,97 @@
             document.querySelectorAll('.category-body').forEach(b => b.id === `body-${key}` ? b.classList.toggle('active') : b.classList.remove('active'));
         };
 
-        // IGNORAR HALLAZGO
         document.getElementById('btn-ignore-action').addEventListener('click', () => {
             if(!currentTargetMarkId) return;
             const markEl = document.getElementById(currentTargetMarkId);
             if(markEl) {
-                markEl.replaceWith(document.createTextNode(markEl.textContent)); // Unwraps the mark
+                markEl.replaceWith(document.createTextNode(markEl.textContent)); 
                 tooltip.classList.remove('show');
-                // Ocultar del panel lateral visualmente (para no re-analizar todo el texto de nuevo)
                 const sideItem = document.getElementById(`side-${currentTargetMarkId}`);
                 if(sideItem) sideItem.style.display = 'none';
-                // Ocultar del minimapa
                 const heatTick = document.getElementById(`heat-${currentTargetMarkId}`);
                 if(heatTick) heatTick.style.display = 'none';
             }
         });
 
-        // Async Yielding Helper
         const yieldToMain = () => new Promise(r => setTimeout(r, 0));
 
-        // Motor Principal (Async)
+        // Motor Principal (Async & Heurístico)
         document.getElementById('btnAnalyze').addEventListener('click', async () => {
             const btn = document.getElementById('btnAnalyze');
             const loader = document.getElementById('loader');
             btn.disabled = true; loader.style.display = 'block';
+            await yieldToMain();
 
-            await yieldToMain(); // Permitir que la UI actualice el botón y el loader
-
+            // Limpieza inicial
             let htmlContent = paper.innerHTML;
-            htmlContent = htmlContent.replace(/<mark[^>]*>(.*?)<\/mark>/gi, "$1"); // Limpiar previas
+            htmlContent = htmlContent.replace(/<mark[^>]*>(.*?)<\/mark>/gi, "$1"); 
+            
+            const tempDoc = document.createElement('div');
+            tempDoc.innerHTML = htmlContent;
+            
+            // Eliminar clases I+E+C previas para reiniciar
+            tempDoc.querySelectorAll('.iec-pattern-alert').forEach(el => el.classList.remove('iec-pattern-alert'));
 
-            const tempDiv = document.createElement('div'); tempDiv.innerHTML = htmlContent;
-            const plainText = tempDiv.innerText;
+            let iecFound = false;
+            let imprevisibilidadScore = 100; // Inicia siendo "humano"
+
+            // 1. Análisis Estructural de Proximidad (I+E+C) a nivel de Párrafo
+            tempDoc.querySelectorAll('p, div').forEach(p => {
+                const text = p.innerText.toLowerCase();
+                if(text.trim().length < 20) return; // Ignorar títulos
+
+                const hasInicio = categoriesData.inicio.palabras.some(w => text.includes(w)) || categoriesData.estructural.palabras.some(w => text.includes(w));
+                const hasExpl = categoriesData.explicacion.palabras.some(w => text.includes(w)) || categoriesData.sobreesp.palabras.some(w => text.includes(w));
+                const hasCons = categoriesData.consecuencia.palabras.some(w => text.includes(w)) || categoriesData.cierre.palabras.some(w => text.includes(w));
+
+                if (hasInicio && hasExpl && hasCons) {
+                    p.classList.add('iec-pattern-alert');
+                    p.title = "Patrón I+E+C Detectado: Probabilidad crítica de IA.";
+                    iecFound = true;
+                }
+            });
+
+            if(iecFound) {
+                document.getElementById('iecAlert').style.display = 'block';
+                imprevisibilidadScore -= 35; // Fuerte penalización por estructura predecible
+            } else {
+                document.getElementById('iecAlert').style.display = 'none';
+            }
+
+            // Extraer texto plano para métricas
+            const plainText = tempDoc.innerText;
             const words = plainText.trim().split(/\s+/).filter(w => w.length > 0);
             const totalWords = words.length;
             
-            if(totalWords === 0) {
-                btn.disabled = false; loader.style.display = 'none'; return;
+            if(totalWords === 0) { btn.disabled = false; loader.style.display = 'none'; return; }
+
+            // 2. Análisis de "Burstiness" (Ráfagas de Longitud de Oración)
+            const sentences = plainText.split(/[.?!]/).map(s => s.trim().split(/\s+/).length).filter(l => l >= 4);
+            let sentenceMonotony = false;
+            
+            if(sentences.length > 3) {
+                const maxLen = Math.max(...sentences);
+                const minLen = Math.min(...sentences);
+                const range = maxLen - minLen;
+                
+                if(range < 12) { // Las oraciones miden casi lo mismo
+                    sentenceMonotony = true;
+                    imprevisibilidadScore -= 30;
+                }
             }
+            document.getElementById('cadenceAlert').style.display = sentenceMonotony ? 'block' : 'none';
 
-            // Métrica 1: Riqueza Léxica (Type-Token Ratio)
+            // 3. Riqueza Léxica (TTR)
             const uniqueWords = new Set(words.map(w => w.toLowerCase().replace(/[.,()]/g, ''))).size;
-            const ttr = uniqueWords / totalWords;
-            document.getElementById('ttrAlert').style.display = (totalWords > 50 && ttr < 0.40) ? 'block' : 'none';
+            if((uniqueWords / totalWords) < 0.40) imprevisibilidadScore -= 20;
 
-            // Métrica 2 & 3: Cadencia (Párrafos y Oraciones)
-            const stdDev = (arr) => {
-                const m = arr.reduce((a, b) => a + b, 0) / arr.length;
-                return Math.sqrt(arr.reduce((a, b) => a + Math.pow(b - m, 2), 0) / arr.length);
-            };
-
-            const pLengths = plainText.split('\n').filter(p => p.trim().length > 0).map(p => p.trim().split(/\s+/).length).filter(l => l >= 10);
-            document.getElementById('cadenceAlert').style.display = (pLengths.length > 3 && stdDev(pLengths) < 12) ? 'block' : 'none';
-
-            const sentences = plainText.split(/[.?!]/).map(s => s.trim().split(/\s+/).length).filter(l => l >= 5);
-            document.getElementById('sentenceAlert').style.display = (sentences.length > 5 && stdDev(sentences) < 5) ? 'block' : 'none';
-
+            // Procesamiento RegEx Léxico
+            htmlContent = tempDoc.innerHTML;
             let totalMatches = 0;
             let accordionHTML = '';
             let instanceCounter = 0;
 
-            // Procesamiento Asíncrono por Categorías
             for (const [key, data] of Object.entries(categoriesData)) {
                 let catMatches = [];
                 const sortedPhrases = data.palabras.sort((a, b) => b.length - a.length);
@@ -350,7 +426,7 @@
                 });
 
                 accordionHTML += `
-                    <div class="category-header ${data.colorClase}" onclick="toggleAccordion('${key}')">
+                    <div class="category-header cat-${key}" onclick="toggleAccordion('${key}')">
                         <span>${data.nombre}</span><span>${catMatches.length}</span>
                     </div>
                     <div class="category-body" id="body-${key}">
@@ -359,21 +435,30 @@
                 
                 if(catMatches.length === 0) accordionHTML += `<div style="font-size:0.8rem; color:gray;">0 hallazgos.</div>`;
                 else catMatches.forEach(m => {
-                    accordionHTML += `<div id="side-${m.id}" class="finding-instance ${data.colorClase}" onclick="scrollToMark('${m.id}')"><span>"${m.word}"</span> <span>→</span></div>`;
+                    accordionHTML += `<div id="side-${m.id}" class="finding-instance cat-${key}" onclick="scrollToMark('${m.id}')"><span>"${m.word}"</span> <span>→</span></div>`;
                 });
                 accordionHTML += `</div>`;
                 
-                await yieldToMain(); // Respirar entre categorías para evitar congelar el navegador
+                await yieldToMain();
             }
 
-            // Renderizar DOM Principal
+            // Calculo Final de Imprevisibilidad basado en hallazgos léxicos
+            if (totalMatches > (totalWords * 0.05)) imprevisibilidadScore -= 15; // Si más del 5% del texto son tics de IA
+
+            // Renderizar DOM
             paper.innerHTML = htmlContent;
             document.getElementById('dynamic-accordion').innerHTML = accordionHTML;
             document.getElementById('densityMetric').innerText = `${Math.min(100, ((totalMatches * 1.5) / totalWords) * 100).toFixed(1)}%`;
+            
+            // Actualizar UI del Score de Imprevisibilidad
+            imprevisibilidadScore = Math.max(0, imprevisibilidadScore); // No menos de 0
+            const entropyEl = document.getElementById('entropyMetric');
+            entropyEl.innerText = `${imprevisibilidadScore}%`;
+            entropyEl.style.color = imprevisibilidadScore > 70 ? '#10b981' : (imprevisibilidadScore > 40 ? '#f59e0b' : '#ef4444');
 
-            await yieldToMain(); // Respirar antes de pintar el Heatmap
+            await yieldToMain();
 
-            // Renderizar Heatmap (Minimapa)
+            // Minimapa
             let heatmapHTML = '';
             const paperHeight = paper.scrollHeight;
             document.querySelectorAll('mark').forEach(mark => {
@@ -382,9 +467,8 @@
                 const color = categoriesData[catKey].colorHex;
                 heatmapHTML += `<div id="heat-${mark.id}" class="heat-tick" style="top: ${topPercent}%; background-color: ${color};" onclick="scrollToMark('${mark.id}')" title="Ir al hallazgo"></div>`;
             });
-            heatmap.innerHTML = heatmapHTML;
+            document.getElementById('heatmap-container').innerHTML = heatmapHTML;
 
-            // Finalizar carga
             btn.disabled = false; loader.style.display = 'none';
         });
     </script>
