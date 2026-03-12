@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Humanizer AI Dashboard v.4.0 (Heuristic Parser)</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <title>Humanizer AI Dashboard v.5.0 (Counter-Heuristics)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
     <style>
         :root {
@@ -16,19 +16,21 @@
             --primary: #0f172a;
             --primary-hover: #334155;
             
-            /* Paleta Heurística Extendida */
-            --c-inicio: #bfdbfe;       /* Blue 200 */
-            --c-continuacion: #99f6e4; /* Teal 200 */
-            --c-explicacion: #fef08a;  /* Yellow 200 */
-            --c-consecuencia: #fed7aa; /* Orange 200 */
-            --c-cierre: #fecaca;       /* Red 200 */
+            /* Paleta Heurística IA (Penalización) */
+            --c-inicio: #bfdbfe;       
+            --c-continuacion: #99f6e4; 
+            --c-explicacion: #fef08a;  
+            --c-consecuencia: #fed7aa; 
+            --c-cierre: #fecaca;       
+            --c-estructural: #e9d5ff;  
+            --c-sobreesp: #fbcfe8;     
+            --c-neutralidad: #e2e8f0;  
+            --c-impersonal: #d9f99d;   
+            --c-primera: #fca5a5;      
             
-            --c-estructural: #e9d5ff;  /* Purple 200 */
-            --c-sobreesp: #fbcfe8;     /* Pink 200 */
-            --c-neutralidad: #e2e8f0;  /* Slate 200 */
-            --c-impersonal: #d9f99d;   /* Lime 200 */
-            --c-precision: #bae6fd;    /* Sky 200 */
-            --c-primera: #fca5a5;      /* Red 300 */
+            /* Nuevas Categorías (Genérico y Positivo) */
+            --c-generico: #cbd5e1;     /* Slate 300 - Neutral/Grisáceo */
+            --c-humano: #bbf7d0;       /* Green 200 - Positivo */
         }
 
         [data-theme="dark"] {
@@ -49,21 +51,23 @@
             --c-sobreesp: #831843;
             --c-neutralidad: #334155;
             --c-impersonal: #3f6212;
-            --c-precision: #075985;
             --c-primera: #991b1b;
+            
+            --c-generico: #475569;
+            --c-humano: #166534;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); transition: 0.3s; overflow: hidden; }
         
         header { padding: 1rem 2rem; background: var(--sidebar-bg); border-bottom: 1px solid var(--border-color); display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; z-index: 10; position: relative; }
-        h1 { font-size: 1.2rem; font-weight: 600; display: flex; align-items: center; gap: 10px;}
+        h1 { font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 10px; color: var(--primary);}
         
         .loader { display: none; width: 18px; height: 18px; border: 2px solid var(--primary); border-bottom-color: transparent; border-radius: 50%; animation: rotation 1s linear infinite; }
         @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         .controls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-        button, label.btn { background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: 0.2s; display: inline-block; }
+        button, label.btn { background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: 0.2s; display: inline-block; }
         button:hover, label.btn:hover { background: var(--primary-hover); }
         button:disabled { opacity: 0.6; cursor: not-allowed; }
         .btn-secondary { background: transparent; color: var(--text-color); border: 1px solid var(--border-color); }
@@ -72,30 +76,38 @@
 
         .layout { display: flex; flex-direction: row; height: calc(100vh - 70px); }
         
-        #sidebar { width: 360px; background: var(--sidebar-bg); border-right: 1px solid var(--border-color); padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; }
+        #sidebar { width: 380px; background: var(--sidebar-bg); border-right: 1px solid var(--border-color); padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; }
         
         .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
-        .metric-card { background: var(--bg-color); padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid var(--border-color); }
-        .metric-value { font-size: 1.8rem; font-weight: 600; color: var(--primary); margin-top: 0.5rem; }
-        .metric-card h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; }
+        .metric-card { background: var(--bg-color); padding: 0.8rem; border-radius: 8px; text-align: center; border: 1px solid var(--border-color); }
+        .metric-value { font-size: 1.6rem; font-weight: 700; color: var(--primary); margin-top: 0.2rem; }
+        .metric-card h3 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; }
         
         .alert-box { display: none; background: #fee2e2; color: #991b1b; padding: 0.8rem; border-radius: 6px; font-size: 0.8rem; border: 1px solid #f87171; line-height: 1.4; }
         [data-theme="dark"] .alert-box { background: #7f1d1d; color: #fecaca; border-color: #991b1b; }
-        .alert-warning { background: #fef9c3; color: #854d0e; border-color: #facc15; }
-        [data-theme="dark"] .alert-warning { background: #422006; color: #fef08a; border-color: #ca8a04; }
 
-        /* Estilos de Categorías Dinámicas (CSS generado por JS simplificado) */
-        .category-header { display: flex; justify-content: space-between; padding: 0.8rem; border-radius: 4px; font-size: 0.9rem; cursor: pointer; font-weight: 600; background: var(--bg-color); transition: 0.2s; border: 1px solid transparent; margin-bottom: 0.2rem; }
+        .category-header { display: flex; justify-content: space-between; padding: 0.8rem; border-radius: 4px; font-size: 0.85rem; cursor: pointer; font-weight: 600; background: var(--bg-color); transition: 0.2s; border: 1px solid transparent; margin-bottom: 0.2rem; }
         .category-header:hover { border-color: var(--border-color); filter: brightness(0.95); }
         .category-body { display: none; padding: 0.5rem 0.5rem 1rem 0.5rem; flex-direction: column; gap: 0.5rem; }
         .category-body.active { display: flex; }
-        .cat-desc { font-size: 0.8rem; color: #64748b; margin-bottom: 0.5rem; font-style: italic; }
+        .cat-desc { font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem; font-style: italic; line-height: 1.4;}
         .finding-instance { font-size: 0.8rem; padding: 0.4rem 0.6rem; background: var(--bg-color); border-radius: 4px; cursor: pointer; transition: 0.2s; border-left: 3px solid transparent; color: var(--text-color); display: flex; justify-content: space-between;}
         .finding-instance:hover { filter: brightness(0.9); transform: translateX(2px); }
 
+        /* Top 20 Words Panel */
+        .top-words-container { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; }
+        .top-words-container h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 0.8rem; }
+        .word-list { display: flex; flex-direction: column; gap: 0.3rem; max-height: 200px; overflow-y: auto; padding-right: 0.5rem; }
+        .word-item { display: flex; justify-content: space-between; font-size: 0.8rem; align-items: center; }
+        .word-item span.count { background: var(--border-color); padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; font-size: 0.75rem; }
+
+        /* Disclaimer Educativo */
+        .disclaimer-box { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 0.8rem; border-radius: 6px; font-size: 0.75rem; line-height: 1.4; margin-top: auto; }
+        [data-theme="dark"] .disclaimer-box { background: #052e16; border-color: #14532d; color: #86efac; }
+
         #main-view { flex: 1; display: flex; position: relative; overflow: hidden; }
         #editor-container { flex: 1; padding: 2rem; overflow-y: auto; display: flex; justify-content: center; scroll-behavior: smooth; }
-        #paper { background: var(--paper-bg); width: 100%; max-width: 850px; min-height: 800px; padding: 4rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); font-size: 1.1rem; line-height: 2; outline: none; border-radius: 4px; }
+        #paper { background: var(--paper-bg); width: 100%; max-width: 850px; min-height: 800px; padding: 4rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); font-size: 1.15rem; line-height: 2; outline: none; border-radius: 4px; color: var(--text-color); }
         
         mark { border-radius: 3px; padding: 0 0.2rem; cursor: pointer; transition: opacity 0.2s; color: inherit; }
         mark:hover { opacity: 0.8; outline: 1px dashed var(--text-color); }
@@ -108,7 +120,7 @@
         .heat-tick { position: absolute; width: 100%; height: 4px; opacity: 0.7; cursor: pointer; }
         .heat-tick:hover { opacity: 1; transform: scaleY(1.5); }
 
-        #smart-tooltip { position: fixed; opacity: 0; pointer-events: none; transition: opacity 0.2s; background: var(--paper-bg); border: 1px solid var(--border-color); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 1rem; border-radius: 8px; z-index: 1000; width: 280px; }
+        #smart-tooltip { position: fixed; opacity: 0; pointer-events: none; transition: opacity 0.2s; background: var(--paper-bg); border: 1px solid var(--border-color); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15); padding: 1rem; border-radius: 8px; z-index: 1000; width: 280px; }
         #smart-tooltip.show { opacity: 1; pointer-events: auto; }
         .tt-razon { font-size: 0.75rem; font-weight: 700; color: #ef4444; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.5px;}
         .tt-sugerencia { font-size: 0.85rem; color: var(--text-color); margin-bottom: 0.8rem; line-height: 1.5; }
@@ -126,7 +138,7 @@
 <body>
 
     <header>
-        <h1>Humanizer AI v.4.0 <span style="font-size:0.8rem; font-weight:400; color:#64748b;">(Stylistic Parser)</span> <div class="loader" id="loader"></div></h1>
+        <h1>Humanizer AI v.5.0 <span style="font-size:0.8rem; font-weight:400; color:#64748b;">(Counter-Heuristics)</span> <div class="loader" id="loader"></div></h1>
         <div class="controls">
             <button id="themeToggle" class="btn-secondary">Modo Noche</button>
             <label class="btn btn-secondary">
@@ -140,28 +152,42 @@
     <div class="layout">
         <aside id="sidebar">
             <div class="dashboard-grid">
-                <div class="metric-card">
+                <div class="metric-card" title="Basado en conectores y estructuras rígidas.">
                     <h3>Densidad IA</h3>
                     <div class="metric-value" id="densityMetric">0%</div>
                 </div>
-                <div class="metric-card" title="100% es muy humano (caótico). 0% es robótico (predecible).">
+                <div class="metric-card" title="100% es orgánico/humano. 0% es simétrico/robótico.">
                     <h3>Imprevisibilidad</h3>
                     <div class="metric-value" id="entropyMetric" style="color: #10b981;">100%</div>
                 </div>
+                <div class="metric-card" title="Palabras abstractas que inflan el texto.">
+                    <h3>Vocab. Genérico</h3>
+                    <div class="metric-value" id="genericMetric" style="color: #64748b;">0</div>
+                </div>
+                <div class="metric-card" title="Expresiones orgánicas que suman puntos.">
+                    <h3>Rasgos Humanos</h3>
+                    <div class="metric-value" id="humanMetric" style="color: #10b981;">0</div>
+                </div>
             </div>
 
-            <div class="alert-box alert-warning" id="iecAlert">
+            <div class="alert-box" id="iecAlert">
                 <strong>⚠️ Alerta Estructural (I+E+C):</strong> Hay párrafos que siguen la fórmula predecible de IA (Idea + Explicación + Consecuencia).
             </div>
-            <div class="alert-box" id="cadenceAlert">
-                <strong>⚠️ Cadencia Monótona:</strong> Longitud de oraciones o párrafos excesivamente simétrica.
+
+            <div class="top-words-container" id="topWordsContainer" style="display:none;">
+                <h3>Top 20 Frecuencia (≥ 5 letras)</h3>
+                <div class="word-list" id="wordListBody"></div>
             </div>
 
             <div id="accordion-container">
-                <h3 style="margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase; color: #64748b;">Desglose Léxico</h3>
+                <h3 style="margin-bottom: 0.5rem; font-size: 0.8rem; text-transform: uppercase; color: #64748b;">Desglose Léxico</h3>
                 <div id="dynamic-accordion">
                     <p style="font-size:0.85rem; color:gray;">Ejecuta el análisis para visualizar los patrones.</p>
                 </div>
+            </div>
+
+            <div class="disclaimer-box">
+                <strong>🛡️ Nota Educativa:</strong> Los detectores de IA miden <em>probabilidad estadística</em>, no certeza absoluta. Redactar de forma muy estructurada, aunque seas humano, puede generar falsos positivos. Usa esta app para romper la simetría algorítmica.
             </div>
         </aside>
 
@@ -182,80 +208,87 @@
     </div>
 
     <script>
-        // 1. Diccionario Heurístico Avanzado (v.4.0)
+        // 1. Diccionario Heurístico y de NLP (v.5.0)
         const categoriesData = {
+            humano: { // REFUERZO POSITIVO
+                nombre: "Marcador Humano", varColor: "--c-humano", colorHex: "#bbf7d0", isPositive: true,
+                desc: "Expresiones orgánicas, directas y asimétricas que los humanos usan naturalmente.",
+                razonDefecto: "Rasgo Orgánico (+)", sugDefecto: "¡Excelente! Estas expresiones rompen la monotonía algorítmica de la IA.",
+                palabras: ["incluso", "de hecho", "por eso", "además", "a pesar de que", "en realidad", "sin ir más lejos", "por ejemplo"]
+            },
+            generico: { // VOCABULARIO GENÉRICO (Las 20 palabras)
+                nombre: "Vocabulario Genérico", varColor: "--c-generico", colorHex: "#cbd5e1", isNeutral: true,
+                desc: "Palabras abstractas de falsa importancia. Su repetición satura el texto.",
+                razonDefecto: "Saturación Conceptual", sugDefecto: "Camuflaje: Si abusas de esta palabra, el detector te marcará. Cámbiala por un dato específico o elimínala.",
+                palabras: ["fundamental", "crucial", "esencial", "significativo", "relevante", "importante", "analizar", "comprender", "abordar", "considerar", "evaluar", "contexto", "perspectiva", "enfoque", "ámbito", "proceso", "dinámica", "impacto", "desarrollo", "evolución"]
+            },
             inicio: {
                 nombre: "Conectores de Inicio", varColor: "--c-inicio", colorHex: "#bfdbfe",
-                desc: "Estructuras de apertura de párrafo muy académicas.",
-                razonDefecto: "Apertura Predecible", sugDefecto: "Camuflaje: Entra directo al tema sin anunciar que vas a empezar. Ejemplo: En vez de 'Para comenzar, los datos...', usa 'Los datos muestran...'",
+                desc: "Estructuras de apertura muy predecibles.",
+                razonDefecto: "Apertura Predecible", sugDefecto: "Camuflaje: Entra directo al tema sin anunciar que vas a empezar. Ej: En vez de 'Para comenzar, los datos...', usa 'Los datos muestran...'",
                 palabras: ["en primer lugar", "para comenzar", "en términos generales", "en este contexto", "en este sentido", "cabe destacar que"]
             },
             continuacion: {
                 nombre: "Conectores de Continuación", varColor: "--c-continuacion", colorHex: "#99f6e4",
-                desc: "Transiciones mecánicas para sumar ideas.",
-                razonDefecto: "Suma Mecánica", sugDefecto: "Camuflaje: Los humanos a veces saltan de idea sin conectar tan suavemente. Elimina el conector o usa un punto seguido.",
-                palabras: ["asimismo", "de igual manera", "del mismo modo", "por otra parte", "en segundo lugar", "además"]
+                desc: "Transiciones mecánicas.",
+                razonDefecto: "Suma Mecánica", sugDefecto: "Camuflaje: Los humanos a veces saltan de idea sin conectar tan suavemente. Usa un punto seguido.",
+                palabras: ["asimismo", "de igual manera", "del mismo modo", "por otra parte", "en segundo lugar"]
             },
             explicacion: {
                 nombre: "Conectores de Explicación", varColor: "--c-explicacion", colorHex: "#fef08a",
                 desc: "Conectores que parafrasean lo ya dicho.",
-                razonDefecto: "Paráfrasis de IA", sugDefecto: "Camuflaje: Si la idea anterior era clara, no necesitas explicarla de nuevo. Ahorra palabras.",
+                razonDefecto: "Paráfrasis de IA", sugDefecto: "Camuflaje: Si la idea anterior era clara, no necesitas explicarla de nuevo.",
                 palabras: ["es decir", "en otras palabras", "esto significa que", "lo que implica que"]
             },
             consecuencia: {
                 nombre: "Conectores de Consecuencia", varColor: "--c-consecuencia", colorHex: "#fed7aa",
                 desc: "Cierres lógicos sobreutilizados.",
-                razonDefecto: "Causalidad Algorítmica", sugDefecto: "Camuflaje: Transforma la consecuencia en una acción directa. Ej: 'Esto generó...' en lugar de 'Por lo tanto, se generó...'",
+                razonDefecto: "Causalidad Algorítmica", sugDefecto: "Camuflaje: Transforma la consecuencia en acción. Ej: 'Esto generó...' en lugar de 'Por lo tanto, se generó...'",
                 palabras: ["por lo tanto", "en consecuencia", "por consiguiente", "de ahí que"]
             },
             cierre: {
                 nombre: "Conectores de Cierre", varColor: "--c-cierre", colorHex: "#fecaca",
-                desc: "Fórmulas finales que los detectores escanean instantáneamente.",
+                desc: "Fórmulas finales escaneadas por detectores.",
                 razonDefecto: "Cierre Estereotipado", sugDefecto: "Camuflaje: Nunca uses 'En conclusión'. Termina el texto con la reflexión final directamente.",
                 palabras: ["en conclusión", "en resumen", "en síntesis", "en definitiva", "finalmente, es posible concluir que"]
             },
             estructural: {
                 nombre: "Frases Estructurales", varColor: "--c-estructural", colorHex: "#e9d5ff",
-                desc: "Muletillas organizativas para sonar didáctico.",
-                razonDefecto: "Tono Didáctico Artificial", sugDefecto: "Camuflaje: Elimina la frase. Ve directamente a la afirmación que quieres hacer.",
+                desc: "Muletillas organizativas.",
+                razonDefecto: "Tono Didáctico", sugDefecto: "Camuflaje: Elimina la frase y ve directamente a la afirmación.",
                 palabras: ["es importante destacar que", "es fundamental comprender que", "cabe señalar que", "conviene mencionar que", "resulta relevante considerar que", "vale la pena señalar que", "en este sentido, se puede afirmar que", "a partir de lo anterior", "desde esta perspectiva", "en el marco de"]
             },
             sobreesp: {
                 nombre: "Sobreespecificación", varColor: "--c-sobreesp", colorHex: "#fbcfe8",
                 desc: "Explicar lo obvio repetidamente.",
-                razonDefecto: "Redundancia Explicativa", sugDefecto: "Camuflaje: La IA teme que no la entiendas. Como humano, asume que tu lector es inteligente y omite esta frase.",
+                razonDefecto: "Redundancia", sugDefecto: "Camuflaje: La IA teme que no la entiendas. Como humano, asume que tu lector es inteligente y omite esta frase.",
                 palabras: ["esto se debe a que", "esto ocurre porque", "esto implica que", "lo cual significa que", "lo cual permite entender que", "lo cual demuestra que"]
             },
             neutralidad: {
                 nombre: "Neutralidad Artificial", varColor: "--c-neutralidad", colorHex: "#e2e8f0",
-                desc: "Generalizaciones amplias para evitar especificidad.",
-                razonDefecto: "Falta de Especificidad", sugDefecto: "Camuflaje: Usa datos concretos o ejemplos locales (ej: 'En Chile durante 2023...') en lugar de 'En la actualidad'.",
+                desc: "Generalizaciones amplias.",
+                razonDefecto: "Falta de Especificidad", sugDefecto: "Camuflaje: Usa datos concretos o ejemplos locales en lugar de 'En la actualidad'.",
                 palabras: ["en la actualidad", "en la sociedad contemporánea", "a lo largo del tiempo", "desde tiempos antiguos", "en diversos contextos", "en distintos ámbitos", "en múltiples ocasiones"]
             },
             impersonal: {
                 nombre: "Sintaxis Impersonal", varColor: "--c-impersonal", colorHex: "#d9f99d",
-                desc: "Evasión de responsabilidad en la afirmación.",
+                desc: "Evasión de responsabilidad.",
                 razonDefecto: "Escudo Académico", sugDefecto: "Camuflaje: Atrévete a afirmar los hechos. Ej: 'Los datos demuestran...' en lugar de 'Se ha demostrado que...'",
                 palabras: ["se puede observar que", "se puede afirmar que", "se puede considerar que", "se puede decir que", "se ha demostrado que", "se ha observado que"]
             },
-            precision: {
-                nombre: "Precisión Artificial", varColor: "--c-precision", colorHex: "#bae6fd",
-                desc: "Adjetivos 'comodín' que suenan inteligentes pero son genéricos.",
-                razonDefecto: "Vocabulario Estándar", sugDefecto: "Camuflaje: Reemplázalo por un adjetivo más cotidiano o descriptivo.",
-                palabras: ["significativo", "relevante", "fundamental", "esencial", "crucial", "importante", "complejo", "dinámico", "diverso", "significativo impacto"]
-            },
             primera: {
                 nombre: "Voz Personal", varColor: "--c-primera", colorHex: "#fca5a5",
-                desc: "Uso de 1ra persona, generalmente evitado por IAs pero penalizado en papers formales.",
-                razonDefecto: "Subjetividad", sugDefecto: "Sugerencia: Aunque es un rasgo muy humano, en la academia formal debes cambiar a tercera persona.",
+                desc: "Uso de 1ra persona, penalizado en papers formales.",
+                razonDefecto: "Subjetividad", sugDefecto: "Sugerencia: Cambia a tercera persona formal si es un texto académico.",
                 palabras: ["yo", "nosotros", "nuestro", "nuestra", "nuestros", "nuestras", "creemos", "pensamos", "analizamos", "observamos", "concluimos", "en mi opinión", "mi perspectiva", "hemos"]
             }
         };
 
-        // Inyectar CSS Dinámico para las marcas
+        // Inyectar CSS Dinámico
         let dynamicCSS = "";
         for (const [key, data] of Object.entries(categoriesData)) {
             dynamicCSS += `.mark-${key} { background-color: var(${data.varColor}); } .cat-${key} { border-left: 4px solid var(${data.varColor}); } `;
+            if(data.isPositive) dynamicCSS += `.mark-${key} { color: #064e3b; font-weight: 500; } `;
         }
         const styleSheet = document.createElement("style");
         styleSheet.innerText = dynamicCSS;
@@ -266,7 +299,7 @@
         let currentTargetMarkId = null;
         let tooltipTimeout;
 
-        // UI toggles y Archivos
+        // UI Toggles
         document.getElementById('themeToggle').addEventListener('click', () => {
             document.body.setAttribute('data-theme', document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
         });
@@ -284,12 +317,16 @@
             navigator.clipboard.writeText(temp.innerText).then(() => alert("Texto limpio exportado al portapapeles."));
         });
 
-        // Tooltip con DEBOUNCE
+        // Tooltip con Debounce
         paper.addEventListener('mouseover', (e) => {
             if(e.target.tagName === 'MARK') {
                 clearTimeout(tooltipTimeout);
                 currentTargetMarkId = e.target.id;
-                document.getElementById('tt-razon').innerText = e.target.dataset.razon;
+                const razonEl = document.getElementById('tt-razon');
+                razonEl.innerText = e.target.dataset.razon;
+                // Si es positivo, cambiar color del titulo del tooltip
+                razonEl.style.color = e.target.classList.contains('mark-humano') ? '#16a34a' : (e.target.classList.contains('mark-generico') ? '#64748b' : '#ef4444');
+                
                 document.getElementById('tt-sugerencia').innerText = e.target.dataset.sugerencia;
                 
                 const rect = e.target.getBoundingClientRect();
@@ -300,9 +337,7 @@
         });
 
         paper.addEventListener('mouseout', (e) => {
-            if(e.target.tagName === 'MARK') {
-                tooltipTimeout = setTimeout(() => { tooltip.classList.remove('show'); }, 300);
-            }
+            if(e.target.tagName === 'MARK') tooltipTimeout = setTimeout(() => { tooltip.classList.remove('show'); }, 300);
         });
         tooltip.addEventListener('mouseover', () => clearTimeout(tooltipTimeout));
         tooltip.addEventListener('mouseleave', () => { tooltipTimeout = setTimeout(() => { tooltip.classList.remove('show'); }, 300); });
@@ -334,30 +369,27 @@
 
         const yieldToMain = () => new Promise(r => setTimeout(r, 0));
 
-        // Motor Principal (Async & Heurístico)
+        // MOTOR HEURÍSTICO V.5.0
         document.getElementById('btnAnalyze').addEventListener('click', async () => {
             const btn = document.getElementById('btnAnalyze');
             const loader = document.getElementById('loader');
             btn.disabled = true; loader.style.display = 'block';
             await yieldToMain();
 
-            // Limpieza inicial
             let htmlContent = paper.innerHTML;
             htmlContent = htmlContent.replace(/<mark[^>]*>(.*?)<\/mark>/gi, "$1"); 
             
             const tempDoc = document.createElement('div');
             tempDoc.innerHTML = htmlContent;
-            
-            // Eliminar clases I+E+C previas para reiniciar
             tempDoc.querySelectorAll('.iec-pattern-alert').forEach(el => el.classList.remove('iec-pattern-alert'));
 
             let iecFound = false;
-            let imprevisibilidadScore = 100; // Inicia siendo "humano"
+            let imprevisibilidadScore = 100; 
 
-            // 1. Análisis Estructural de Proximidad (I+E+C) a nivel de Párrafo
+            // 1. Detección Estructural I+E+C
             tempDoc.querySelectorAll('p, div').forEach(p => {
                 const text = p.innerText.toLowerCase();
-                if(text.trim().length < 20) return; // Ignorar títulos
+                if(text.trim().length < 20) return; 
 
                 const hasInicio = categoriesData.inicio.palabras.some(w => text.includes(w)) || categoriesData.estructural.palabras.some(w => text.includes(w));
                 const hasExpl = categoriesData.explicacion.palabras.some(w => text.includes(w)) || categoriesData.sobreesp.palabras.some(w => text.includes(w));
@@ -372,41 +404,56 @@
 
             if(iecFound) {
                 document.getElementById('iecAlert').style.display = 'block';
-                imprevisibilidadScore -= 35; // Fuerte penalización por estructura predecible
+                imprevisibilidadScore -= 35;
             } else {
                 document.getElementById('iecAlert').style.display = 'none';
             }
 
-            // Extraer texto plano para métricas
+            // 2. Extracción de NLP y Frecuencia de Palabras (Top 20)
             const plainText = tempDoc.innerText;
-            const words = plainText.trim().split(/\s+/).filter(w => w.length > 0);
-            const totalWords = words.length;
+            const wordsRaw = plainText.trim().split(/\s+/).filter(w => w.length > 0);
+            const totalWords = wordsRaw.length;
             
             if(totalWords === 0) { btn.disabled = false; loader.style.display = 'none'; return; }
 
-            // 2. Análisis de "Burstiness" (Ráfagas de Longitud de Oración)
-            const sentences = plainText.split(/[.?!]/).map(s => s.trim().split(/\s+/).length).filter(l => l >= 4);
-            let sentenceMonotony = false;
+            // Limpiar puntuación para contar
+            const cleanWords = plainText.toLowerCase().replace(/[.,()[\]{}"'?¿!¡]/g, '').split(/\s+/).filter(w => w.length >= 5);
+            const wordCounts = {};
+            cleanWords.forEach(w => wordCounts[w] = (wordCounts[w] || 0) + 1);
             
-            if(sentences.length > 3) {
-                const maxLen = Math.max(...sentences);
-                const minLen = Math.min(...sentences);
-                const range = maxLen - minLen;
-                
-                if(range < 12) { // Las oraciones miden casi lo mismo
-                    sentenceMonotony = true;
-                    imprevisibilidadScore -= 30;
-                }
+            const top20Words = Object.entries(wordCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 20);
+
+            // Renderizar Top 20
+            const topWordsContainer = document.getElementById('topWordsContainer');
+            const wordListBody = document.getElementById('wordListBody');
+            if(top20Words.length > 0) {
+                topWordsContainer.style.display = 'block';
+                wordListBody.innerHTML = top20Words.map(item => `
+                    <div class="word-item">
+                        <span>${item[0]}</span>
+                        <span class="count">${item[1]}</span>
+                    </div>
+                `).join('');
             }
-            document.getElementById('cadenceAlert').style.display = sentenceMonotony ? 'block' : 'none';
 
-            // 3. Riqueza Léxica (TTR)
-            const uniqueWords = new Set(words.map(w => w.toLowerCase().replace(/[.,()]/g, ''))).size;
-            if((uniqueWords / totalWords) < 0.40) imprevisibilidadScore -= 20;
+            // 3. Cadencia y TTR
+            const sentences = plainText.split(/[.?!]/).map(s => s.trim().split(/\s+/).length).filter(l => l >= 4);
+            if(sentences.length > 3) {
+                const range = Math.max(...sentences) - Math.min(...sentences);
+                if(range < 12) imprevisibilidadScore -= 30; // Penalización por monotonía
+            }
 
-            // Procesamiento RegEx Léxico
+            const uniqueWords = new Set(cleanWords).size;
+            if((uniqueWords / cleanWords.length) < 0.40) imprevisibilidadScore -= 20;
+
+            // 4. Procesamiento Léxico (Separando contadores)
             htmlContent = tempDoc.innerHTML;
-            let totalMatches = 0;
+            let aiMatches = 0;
+            let genericMatchesCount = 0;
+            let humanMatchesCount = 0;
+            
             let accordionHTML = '';
             let instanceCounter = 0;
 
@@ -420,7 +467,12 @@
                         instanceCounter++;
                         const markId = `mark-${key}-${instanceCounter}`;
                         catMatches.push({ word: match, id: markId });
-                        totalMatches++;
+                        
+                        // Separar estadísticas
+                        if(data.isNeutral) genericMatchesCount++;
+                        else if(data.isPositive) humanMatchesCount++;
+                        else aiMatches++;
+
                         return `<mark id="${markId}" class="mark-${key}" data-razon="${data.razonDefecto}" data-sugerencia="${data.sugDefecto}">${match}</mark>`;
                     });
                 });
@@ -442,16 +494,21 @@
                 await yieldToMain();
             }
 
-            // Calculo Final de Imprevisibilidad basado en hallazgos léxicos
-            if (totalMatches > (totalWords * 0.05)) imprevisibilidadScore -= 15; // Si más del 5% del texto son tics de IA
+            // Ajustes Finales de Imprevisibilidad basados en las nuevas métricas
+            if (aiMatches > (totalWords * 0.05)) imprevisibilidadScore -= 15; // Densidad IA alta
+            if (genericMatchesCount > (totalWords * 0.02)) imprevisibilidadScore -= 10; // Saturación Genérica
+            imprevisibilidadScore += (humanMatchesCount * 5); // BONO: +5% por cada rasgo humano
+            imprevisibilidadScore = Math.min(100, Math.max(0, imprevisibilidadScore)); // Limitar 0-100
 
             // Renderizar DOM
             paper.innerHTML = htmlContent;
             document.getElementById('dynamic-accordion').innerHTML = accordionHTML;
-            document.getElementById('densityMetric').innerText = `${Math.min(100, ((totalMatches * 1.5) / totalWords) * 100).toFixed(1)}%`;
             
-            // Actualizar UI del Score de Imprevisibilidad
-            imprevisibilidadScore = Math.max(0, imprevisibilidadScore); // No menos de 0
+            // Actualizar Dashboards Superiores
+            document.getElementById('densityMetric').innerText = `${Math.min(100, ((aiMatches * 1.5) / totalWords) * 100).toFixed(1)}%`;
+            document.getElementById('genericMetric').innerText = genericMatchesCount;
+            document.getElementById('humanMetric').innerText = humanMatchesCount;
+            
             const entropyEl = document.getElementById('entropyMetric');
             entropyEl.innerText = `${imprevisibilidadScore}%`;
             entropyEl.style.color = imprevisibilidadScore > 70 ? '#10b981' : (imprevisibilidadScore > 40 ? '#f59e0b' : '#ef4444');
