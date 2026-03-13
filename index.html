@@ -4,8 +4,137 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analizador de Redacción IA - Client Side</title>
-    <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <style>
+        /* Variables y Reset */
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #333;
+            --ai-color: #fde8e8;
+            --ai-border: #d9534f;
+            --repeat-color: #e0f3ff;
+            --repeat-border: #0275d8;
+            --panel-bg: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header input[type="file"] {
+            margin-top: 15px;
+            padding: 10px;
+            background: white;
+            color: black;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* Layout Mobile First */
+        .dashboard {
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .viewer-section {
+            flex: 1;
+            background: var(--panel-bg);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            min-height: 60vh;
+        }
+
+        .document-content p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+
+        /* Panel Lateral */
+        .panel-section {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel-box {
+            background: var(--panel-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .panel-box h2 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .ranking-list {
+            list-style: none;
+            margin-top: 10px;
+        }
+
+        .ranking-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.9rem;
+        }
+
+        /* Clases de Resaltado generadas por JS */
+        .highlight-ai {
+            background-color: var(--ai-color);
+            border-bottom: 2px solid var(--ai-border);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .highlight-ai:hover {
+            background-color: #fcd5d5;
+        }
+
+        .highlight-repeat {
+            background-color: var(--repeat-color);
+            border-bottom: 2px solid var(--repeat-border);
+        }
+
+        /* Desktop Breakpoint */
+        @media (min-width: 992px) {
+            .dashboard {
+                flex-direction: row;
+            }
+            .panel-section {
+                width: 350px;
+                position: sticky;
+                top: 20px;
+                height: max-content;
+            }
+        }
+    </style>
 </head>
 <body>
     <header class="header">
@@ -43,6 +172,146 @@
         </aside>
     </main>
 
-    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const uploadInput = document.getElementById('uploadInput');
+            const documentViewer = document.getElementById('document-viewer');
+            const aiExplanation = document.getElementById('ai-explanation');
+            const wordRanking = document.getElementById('word-ranking');
+
+            // 1. Diccionarios y Configuración
+            const stopWords = ['para', 'pero', 'desde', 'como', 'este', 'esta', 'estos', 'estas', 'aquel', 'sobre', 'entre', 'hacia', 'hasta', 'segun', 'bajo', 'ante', 'tras', 'pues', 'luego', 'porque', 'aunque', 'sino', 'mientras', 'cuando', 'donde', 'quien', 'cual', 'cuyo', 'todo', 'nada', 'algo', 'alguien', 'ningun', 'mucho', 'poco', 'tanto', 'solo', 'tambien', 'tampoco', 'tiene', 'tienen', 'puede', 'pueden', 'hacer', 'estar', 'son', 'las', 'los', 'del', 'que', 'por', 'con', 'una', 'uno', 'unos', 'unas', 'sus'];
+            
+            // Diccionario basado en tu texto y patrones comunes de IA
+            const aiClliches = [
+                { phrase: "en el contexto actual", reason: "Cliché típico de IA para iniciar introducciones o contextualizar sin ir directo al grano." },
+                { phrase: "es importante destacar", reason: "Fórmula repetitiva y genérica de IA para enfatizar un punto." },
+                { phrase: "cabe destacar", reason: "Fórmula repetitiva y genérica de IA." },
+                { phrase: "en resumen", reason: "Conector muy común y predecible en cierres generados por IA." },
+                { phrase: "imperativo", reason: "Palabra con un tono de urgencia frecuentemente sobreutilizada por LLMs." },
+                { phrase: "multifacético", reason: "Adjetivo comodín de la IA para describir temas complejos." },
+                { phrase: "intrínseco", reason: "Término académico sobreutilizado para intentar sonar excesivamente sofisticado." },
+                { phrase: "se busca", reason: "Estructura de voz pasiva que la IA usa repetitivamente (lo usaste mucho en tus Resultados)." },
+                { phrase: "en este escenario", reason: "Conector de transición de IA muy estandarizado." },
+                { phrase: "en conclusión", reason: "Transición de cierre robótica." }
+            ];
+
+            // 2. Evento de Carga de Archivo
+            uploadInput.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(loadEvent) {
+                    const arrayBuffer = loadEvent.target.result;
+                    
+                    mammoth.convertToHtml({arrayBuffer: arrayBuffer})
+                        .then(displayResult)
+                        .catch(handleError);
+                };
+                reader.readAsArrayBuffer(file);
+            });
+
+            // 3. Procesamiento del Texto (OPTIMIZADO)
+            function displayResult(result) {
+                let rawHtml = result.value;
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(rawHtml, 'text/html');
+                const paragraphs = doc.querySelectorAll('p');
+                
+                let globalWordCounts = {};
+                let updatedHtmlBody = "";
+
+                paragraphs.forEach(p => {
+                    // Limpieza estricta para evitar bloqueos del motor Regex
+                    let text = p.textContent.replace(/[^\w\sáéíóúüñÁÉÍÓÚÜÑ]/gi, '');
+                    if (!text.trim()) {
+                        updatedHtmlBody += `<p>${p.innerHTML}</p>`;
+                        return;
+                    }
+
+                    const words = text.toLowerCase().split(/\s+/);
+                    let paragraphWordCounts = {};
+                    
+                    words.forEach(w => {
+                        if (w.length > 4 && !stopWords.includes(w)) {
+                            paragraphWordCounts[w] = (paragraphWordCounts[w] || 0) + 1;
+                            globalWordCounts[w] = (globalWordCounts[w] || 0) + 1;
+                        }
+                    });
+
+                    // Resalta si se repite > 2 veces en un párrafo
+                    const repeatedInParagraph = Object.keys(paragraphWordCounts).filter(w => paragraphWordCounts[w] > 2); 
+
+                    let htmlContent = p.innerHTML;
+
+                    // A. Inyectar HTML para resaltados de IA
+                    aiClliches.forEach(cliche => {
+                        const safePhrase = cliche.phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const regex = new RegExp(`(${safePhrase})`, 'gi');
+                        htmlContent = htmlContent.replace(regex, `<span class="highlight-ai" data-reason="${cliche.reason}">$1</span>`);
+                    });
+
+                    // B. Inyectar HTML para palabras repetidas
+                    repeatedInParagraph.forEach(word => {
+                        const safeWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        // Lookahead negativo: Reemplaza solo si la palabra NO está dentro de un tag HTML
+                        const regex = new RegExp(`\\b(${safeWord})\\b(?![^<]*>)`, 'gi');
+                        htmlContent = htmlContent.replace(regex, `<span class="highlight-repeat">$&</span>`);
+                    });
+
+                    updatedHtmlBody += `<p>${htmlContent}</p>`;
+                });
+
+                // Renderizado directo
+                documentViewer.innerHTML = updatedHtmlBody;
+
+                // Renderizar Ranking
+                renderTop20(globalWordCounts);
+                
+                // Agregar interactividad al panel
+                setupPanelInteractivity();
+            }
+
+            // 4. Funciones Auxiliares
+            function renderTop20(wordCounts) {
+                const sortedWords = Object.entries(wordCounts)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 20);
+
+                wordRanking.innerHTML = '';
+                
+                if (sortedWords.length === 0) {
+                    wordRanking.innerHTML = '<li>No hay suficientes palabras para el ranking.</li>';
+                    return;
+                }
+
+                sortedWords.forEach(([word, count]) => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span>${word}</span> <strong>${count}</strong>`;
+                    wordRanking.appendChild(li);
+                });
+            }
+
+            function setupPanelInteractivity() {
+                const aiPhrases = document.querySelectorAll('.highlight-ai');
+                aiPhrases.forEach(el => {
+                    el.addEventListener('click', function() {
+                        const reason = this.getAttribute('data-reason');
+                        aiExplanation.innerHTML = `<strong>Patrón detectado:</strong> "${this.textContent}"<br><br><em>${reason}</em>`;
+                        
+                        // Efecto visual para indicar selección
+                        aiPhrases.forEach(p => p.style.backgroundColor = 'var(--ai-color)');
+                        this.style.backgroundColor = '#ffb3b3';
+                    });
+                });
+            }
+
+            function handleError(err) {
+                console.error("Error al leer el archivo Word: ", err);
+                documentViewer.innerHTML = `<p style="color:red;">Error al procesar el archivo. Asegúrate de que es un .docx válido.</p>`;
+            }
+        });
+    </script>
 </body>
 </html>
