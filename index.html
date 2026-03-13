@@ -3,313 +3,280 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analizador de Redacción IA - Client Side</title>
+    <title>Auditor Avanzado de Redacción - SPA</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <style>
-        /* Variables y Reset */
+        /* ================= CSS: Mobile First & UI ================= */
         :root {
-            --bg-color: #f8f9fa;
-            --text-color: #333;
-            --ai-color: #fde8e8;
-            --ai-border: #d9534f;
-            --repeat-color: #e0f3ff;
-            --repeat-border: #0275d8;
-            --panel-bg: #ffffff;
+            --bg: #f4f7f6; --text: #333; --panel-bg: #fff;
+            --c-long: #fef08a; --b-long: #eab308; /* Amarillo */
+            --c-acad: #fecaca; --b-acad: #ef4444; /* Rojo */
+            --c-rep:  #bfdbfe; --b-rep:  #3b82f6; /* Azul */
+            --c-top:  #e9d5ff; --b-top:  #a855f7; /* Morado */
+            --c-top4: #bbf7d0; --b-top4: #22c55e; /* Verde */
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); line-height: 1.6; }
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            line-height: 1.6;
-        }
+        .header { background: #1e293b; color: white; padding: 20px; text-align: center; }
+        .header input { margin-top: 15px; padding: 8px; border-radius: 4px; cursor: pointer; }
 
-        .header {
-            background-color: #2c3e50;
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
+        .dashboard { display: flex; flex-direction: column; padding: 20px; gap: 20px; max-width: 1600px; margin: 0 auto; }
+        
+        /* Stats Bar */
+        .stats-bar { display: flex; gap: 20px; background: var(--panel-bg); padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-weight: bold; justify-content: center; flex-wrap: wrap;}
+        .stat-box { background: #e2e8f0; padding: 10px 20px; border-radius: 6px; }
 
-        .header input[type="file"] {
-            margin-top: 15px;
-            padding: 10px;
-            background: white;
-            color: black;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        /* Layout Mobile First */
-        .dashboard {
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-            gap: 20px;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .viewer-section {
-            flex: 1;
-            background: var(--panel-bg);
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            min-height: 60vh;
-        }
-
-        .document-content p {
-            margin-bottom: 15px;
-            text-align: justify;
-        }
+        /* Viewer */
+        .viewer-section { flex: 1; background: var(--panel-bg); padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); min-height: 60vh; font-size: 1.1rem; }
+        .viewer-section p { margin-bottom: 15px; text-align: justify; }
 
         /* Panel Lateral */
-        .panel-section {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
+        .panel-section { width: 100%; display: flex; flex-direction: column; gap: 15px; }
+        .panel-box { background: var(--panel-bg); padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .panel-box h2 { font-size: 1.1rem; border-bottom: 2px solid #eee; padding-bottom: 5px; margin-bottom: 10px; }
 
-        .panel-box {
-            background: var(--panel-bg);
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
+        /* Toggles (Interruptores) */
+        .toggle-label { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; cursor: pointer; font-size: 0.95rem; }
+        .toggle-label input { transform: scale(1.2); cursor: pointer; }
+        .color-box { width: 16px; height: 16px; border-radius: 3px; display: inline-block; }
 
-        .panel-box h2 {
-            font-size: 1.2rem;
-            margin-bottom: 10px;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 5px;
-        }
+        /* Rankings */
+        .ranking-container { max-height: 250px; overflow-y: auto; font-size: 0.85rem; padding-right: 5px; }
+        .ranking-list { list-style: none; }
+        .ranking-list li { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #f1f5f9; }
 
-        .ranking-list {
-            list-style: none;
-            margin-top: 10px;
-        }
+        /* Highlight Classes Base */
+        span[class^="hl-"] { cursor: pointer; transition: 0.2s; border-radius: 2px; }
 
-        .ranking-list li {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 0.9rem;
-        }
-
-        /* Clases de Resaltado generadas por JS */
-        .highlight-ai {
-            background-color: var(--ai-color);
-            border-bottom: 2px solid var(--ai-border);
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        .highlight-ai:hover {
-            background-color: #fcd5d5;
-        }
-
-        .highlight-repeat {
-            background-color: var(--repeat-color);
-            border-bottom: 2px solid var(--repeat-border);
-        }
+        /* Display Logic based on Viewer Classes */
+        #document-viewer.show-long .hl-long { background-color: var(--c-long); border-bottom: 2px solid var(--b-long); }
+        #document-viewer.show-acad .hl-acad { background-color: var(--c-acad); border-bottom: 2px solid var(--b-acad); }
+        #document-viewer.show-rep .hl-rep { background-color: var(--c-rep); border-bottom: 2px solid var(--b-rep); }
+        #document-viewer.show-top .hl-top { background-color: var(--c-top); border-bottom: 2px solid var(--b-top); }
+        #document-viewer.show-top4 .hl-top4 { background-color: var(--c-top4); border-bottom: 2px solid var(--b-top4); }
 
         /* Desktop Breakpoint */
-        @media (min-width: 992px) {
-            .dashboard {
-                flex-direction: row;
-            }
-            .panel-section {
-                width: 350px;
-                position: sticky;
-                top: 20px;
-                height: max-content;
-            }
+        @media (min-width: 1024px) {
+            .dashboard { flex-direction: row; }
+            .panel-section { width: 380px; position: sticky; top: 20px; height: max-content; }
         }
     </style>
 </head>
 <body>
     <header class="header">
-        <h1>Auditor de Estilo y Redacción</h1>
-        <p>Sube tu archivo .docx para analizar patrones de IA y repeticiones.</p>
+        <h1>Auditor Analítico de Redacción Institucional</h1>
+        <p>Sube tu .docx. Analiza densidad, longitud, léxico y repeticiones.</p>
         <input type="file" id="uploadInput" accept=".docx">
     </header>
 
     <main class="dashboard">
-        <section class="viewer-section">
-            <div id="document-viewer" class="document-content">
-                <p class="placeholder-text">El texto analizado aparecerá aquí...</p>
+        <section class="main-content" style="flex: 1; display: flex; flex-direction: column; gap: 20px;">
+            <div class="stats-bar">
+                <div class="stat-box">📝 Palabras Totales: <span id="stat-words">0</span></div>
+                <div class="stat-box">🔤 Caracteres (sin espacios): <span id="stat-chars">0</span></div>
             </div>
+
+            <section class="viewer-section">
+                <div id="document-viewer" class="document-content show-long show-acad show-rep show-top show-top4">
+                    <p style="color: #64748b; font-style: italic;">Sube tu documento para comenzar el análisis...</p>
+                </div>
+            </section>
         </section>
 
         <aside class="panel-section">
-            <div class="panel-box explanation-box">
-                <h2>🔍 Explicación IA</h2>
-                <p id="ai-explanation">Haz clic en una frase resaltada en <span style="color: #d9534f; font-weight: bold;">rojo</span> para ver por qué se identificó como un patrón común de Inteligencia Artificial.</p>
+            <div class="panel-box">
+                <h2>🎛️ Panel de Capas (Toggles)</h2>
+                <label class="toggle-label"><input type="checkbox" id="t-long" checked><span class="color-box" style="background:var(--c-long); border:1px solid var(--b-long);"></span> Oraciones > 20 palabras</label>
+                <label class="toggle-label"><input type="checkbox" id="t-acad" checked><span class="color-box" style="background:var(--c-acad); border:1px solid var(--b-acad);"></span> Léxico Exagerado / Académico</label>
+                <label class="toggle-label"><input type="checkbox" id="t-rep" checked><span class="color-box" style="background:var(--c-rep); border:1px solid var(--b-rep);"></span> Repetidas en el mismo párrafo</label>
+                <label class="toggle-label"><input type="checkbox" id="t-top" checked><span class="color-box" style="background:var(--c-top); border:1px solid var(--b-top);"></span> Top 30 Palabras (Todas)</label>
+                <label class="toggle-label"><input type="checkbox" id="t-top4" checked><span class="color-box" style="background:var(--c-top4); border:1px solid var(--b-top4);"></span> Top 30 Palabras (> 4 letras)</label>
             </div>
 
-            <div class="panel-box ranking-box">
-                <h2>🏆 Top 20 Palabras</h2>
-                <p class="small-text">Palabras de >4 caracteres más usadas (excluyendo conectores).</p>
-                <ul id="word-ranking" class="ranking-list">
-                    <li>Esperando documento...</li>
-                </ul>
+            <div class="panel-box">
+                <h2>💡 Explicación / Sugerencia</h2>
+                <p id="explanation-box" style="font-size: 0.95rem; color: #475569;">Haz clic en cualquier palabra u oración resaltada en el texto para ver el diagnóstico y sugerencias de mejora.</p>
             </div>
-            
-            <div class="panel-box legend-box">
-                <h2>🎨 Leyenda</h2>
-                <p><span class="highlight-ai">Fondo Rojo:</span> Posible patrón de IA.</p>
-                <p><span class="highlight-repeat">Fondo Azul:</span> Palabra repetida en el mismo párrafo (>2 veces).</p>
+
+            <div class="panel-box">
+                <h2>🏆 Top 30 (Sin Restricciones)</h2>
+                <div class="ranking-container">
+                    <ul id="list-top" class="ranking-list"><li>Esperando datos...</li></ul>
+                </div>
+            </div>
+
+            <div class="panel-box">
+                <h2>🥇 Top 30 (> 4 Caracteres)</h2>
+                <div class="ranking-container">
+                    <ul id="list-top4" class="ranking-list"><li>Esperando datos...</li></ul>
+                </div>
             </div>
         </aside>
     </main>
 
     <script>
+        // ================= JAVASCRIPT: Lógica de Negocio y NLP =================
         document.addEventListener('DOMContentLoaded', () => {
             const uploadInput = document.getElementById('uploadInput');
-            const documentViewer = document.getElementById('document-viewer');
-            const aiExplanation = document.getElementById('ai-explanation');
-            const wordRanking = document.getElementById('word-ranking');
-
-            // 1. Diccionarios y Configuración
-            const stopWords = ['para', 'pero', 'desde', 'como', 'este', 'esta', 'estos', 'estas', 'aquel', 'sobre', 'entre', 'hacia', 'hasta', 'segun', 'bajo', 'ante', 'tras', 'pues', 'luego', 'porque', 'aunque', 'sino', 'mientras', 'cuando', 'donde', 'quien', 'cual', 'cuyo', 'todo', 'nada', 'algo', 'alguien', 'ningun', 'mucho', 'poco', 'tanto', 'solo', 'tambien', 'tampoco', 'tiene', 'tienen', 'puede', 'pueden', 'hacer', 'estar', 'son', 'las', 'los', 'del', 'que', 'por', 'con', 'una', 'uno', 'unos', 'unas', 'sus'];
+            const viewer = document.getElementById('document-viewer');
+            const explanationBox = document.getElementById('explanation-box');
             
-            // Diccionario basado en tu texto y patrones comunes de IA
-            const aiClliches = [
-                { phrase: "en el contexto actual", reason: "Cliché típico de IA para iniciar introducciones o contextualizar sin ir directo al grano." },
-                { phrase: "es importante destacar", reason: "Fórmula repetitiva y genérica de IA para enfatizar un punto." },
-                { phrase: "cabe destacar", reason: "Fórmula repetitiva y genérica de IA." },
-                { phrase: "en resumen", reason: "Conector muy común y predecible en cierres generados por IA." },
-                { phrase: "imperativo", reason: "Palabra con un tono de urgencia frecuentemente sobreutilizada por LLMs." },
-                { phrase: "multifacético", reason: "Adjetivo comodín de la IA para describir temas complejos." },
-                { phrase: "intrínseco", reason: "Término académico sobreutilizado para intentar sonar excesivamente sofisticado." },
-                { phrase: "se busca", reason: "Estructura de voz pasiva que la IA usa repetitivamente (lo usaste mucho en tus Resultados)." },
-                { phrase: "en este escenario", reason: "Conector de transición de IA muy estandarizado." },
-                { phrase: "en conclusión", reason: "Transición de cierre robótica." }
+            // Diccionario creado específicamente tras analizar el "TÍTULO DEL TRABAJO"
+            const academicDict = [
+                { word: "inalienablemente", reason: "Término jurídico excesivamente denso. Sugerencia: 'de forma absoluta' o 'intransferible'." },
+                { word: "perentorios", reason: "Término legal muy rígido. Sugerencia: 'urgentes', 'estrictos' u 'obligatorios'." },
+                { word: "ejecutoriedad", reason: "Jerga administrativa compleja. Sugerencia: 'aplicación inmediata' o 'cumplimiento obligatorio'." },
+                { word: "detrimentos", reason: "Término anticuado/formal. Sugerencia: 'daños', 'perjuicios' o 'pérdidas'." },
+                { word: "indolencia", reason: "Palabra con carga muy literaria/dramática para un informe técnico. Sugerencia: 'falta de empatía' o 'insensibilidad'." },
+                { word: "inobservancia", reason: "Lenguaje burocrático pesado. Sugerencia: 'incumplimiento' o 'falta'." },
+                { word: "revictimiza", reason: "Término válido pero que, si se abusa, suena a cliché sociológico. Úsalo con moderación." },
+                { word: "paradigma", reason: "Comodín académico sobreutilizado. Sugerencia: 'modelo', 'enfoque' o 'situación'." }
             ];
 
-            // 2. Evento de Carga de Archivo
-            uploadInput.addEventListener('change', function(event) {
-                const file = event.target.files[0];
-                if (!file) return;
+            // Gestión de Capas (Toggles)
+            const toggles = ['long', 'acad', 'rep', 'top', 'top4'];
+            toggles.forEach(t => {
+                document.getElementById(`t-${t}`).addEventListener('change', function() {
+                    if(this.checked) viewer.classList.add(`show-${t}`);
+                    else viewer.classList.remove(`show-${t}`);
+                });
+            });
 
+            uploadInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
                 const reader = new FileReader();
-                reader.onload = function(loadEvent) {
-                    const arrayBuffer = loadEvent.target.result;
-                    
-                    mammoth.convertToHtml({arrayBuffer: arrayBuffer})
-                        .then(displayResult)
-                        .catch(handleError);
-                };
+                reader.onload = (ev) => mammoth.convertToHtml({arrayBuffer: ev.target.result}).then(processDocument);
                 reader.readAsArrayBuffer(file);
             });
 
-            // 3. Procesamiento del Texto (OPTIMIZADO)
-            function displayResult(result) {
-                let rawHtml = result.value;
+            function processDocument(result) {
                 const parser = new DOMParser();
-                const doc = parser.parseFromString(rawHtml, 'text/html');
+                const doc = parser.parseFromString(result.value, 'text/html');
                 const paragraphs = doc.querySelectorAll('p');
                 
-                let globalWordCounts = {};
-                let updatedHtmlBody = "";
+                let totalWords = 0;
+                let totalChars = 0;
+                let globalCountsAll = {};
+                let globalCounts4 = {};
 
+                // Fase 1: Estadísticas Globales
                 paragraphs.forEach(p => {
-                    // Limpieza estricta para evitar bloqueos del motor Regex
-                    let text = p.textContent.replace(/[^\w\sáéíóúüñÁÉÍÓÚÜÑ]/gi, '');
-                    if (!text.trim()) {
-                        updatedHtmlBody += `<p>${p.innerHTML}</p>`;
-                        return;
-                    }
-
-                    const words = text.toLowerCase().split(/\s+/);
-                    let paragraphWordCounts = {};
+                    const text = p.textContent;
+                    totalChars += text.replace(/\s+/g, '').length; // Sin espacios
                     
+                    const words = text.match(/[A-Za-záéíóúüñÁÉÍÓÚÜÑ]+/g) || [];
+                    totalWords += words.length;
+
                     words.forEach(w => {
-                        if (w.length > 4 && !stopWords.includes(w)) {
-                            paragraphWordCounts[w] = (paragraphWordCounts[w] || 0) + 1;
-                            globalWordCounts[w] = (globalWordCounts[w] || 0) + 1;
+                        const lower = w.toLowerCase();
+                        globalCountsAll[lower] = (globalCountsAll[lower] || 0) + 1;
+                        if (lower.length > 4) {
+                            globalCounts4[lower] = (globalCounts4[lower] || 0) + 1;
                         }
                     });
-
-                    // Resalta si se repite > 2 veces en un párrafo
-                    const repeatedInParagraph = Object.keys(paragraphWordCounts).filter(w => paragraphWordCounts[w] > 2); 
-
-                    let htmlContent = p.innerHTML;
-
-                    // A. Inyectar HTML para resaltados de IA
-                    aiClliches.forEach(cliche => {
-                        const safePhrase = cliche.phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        const regex = new RegExp(`(${safePhrase})`, 'gi');
-                        htmlContent = htmlContent.replace(regex, `<span class="highlight-ai" data-reason="${cliche.reason}">$1</span>`);
-                    });
-
-                    // B. Inyectar HTML para palabras repetidas
-                    repeatedInParagraph.forEach(word => {
-                        const safeWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        // Lookahead negativo: Reemplaza solo si la palabra NO está dentro de un tag HTML
-                        const regex = new RegExp(`\\b(${safeWord})\\b(?![^<]*>)`, 'gi');
-                        htmlContent = htmlContent.replace(regex, `<span class="highlight-repeat">$&</span>`);
-                    });
-
-                    updatedHtmlBody += `<p>${htmlContent}</p>`;
                 });
 
-                // Renderizado directo
-                documentViewer.innerHTML = updatedHtmlBody;
+                document.getElementById('stat-words').textContent = totalWords.toLocaleString();
+                document.getElementById('stat-chars').textContent = totalChars.toLocaleString();
 
-                // Renderizar Ranking
-                renderTop20(globalWordCounts);
-                
-                // Agregar interactividad al panel
-                setupPanelInteractivity();
+                const top30All = getTop(globalCountsAll, 30);
+                const top30_4 = getTop(globalCounts4, 30);
+
+                renderRanking('list-top', top30All);
+                renderRanking('list-top4', top30_4);
+
+                // Convertir arrays a sets/maps para búsqueda rápida
+                const setTopAll = new Set(top30All.map(x => x.word));
+                const setTop4 = new Set(top30_4.map(x => x.word));
+
+                let finalHtml = "";
+
+                // Fase 2: Inyección de HTML (Segura)
+                paragraphs.forEach(p => {
+                    let rawText = p.textContent;
+                    if(!rawText.trim()) { finalHtml += `<p></p>`; return; }
+
+                    // A. Buscar Oraciones Largas (>20 palabras) dividiendo por puntuación
+                    let chunks = rawText.split(/([,.;:]+)/); 
+                    let pWrapped = "";
+                    
+                    chunks.forEach((chunk, index) => {
+                        if (index % 2 === 0) { // Es texto (no puntuación)
+                            let pWords = chunk.match(/[A-Za-záéíóúüñÁÉÍÓÚÜÑ]+/g) || [];
+                            if (pWords.length > 20) {
+                                chunk = `<span class="hl-long" data-reason="Oración de ${pWords.length} palabras sin pausas (comas o puntos). Sugerencia: Divídela para mejorar la legibilidad.">${chunk}</span>`;
+                            }
+                        }
+                        pWrapped += chunk;
+                    });
+
+                    // Calcular repeticiones locales
+                    let pWordsLocal = rawText.toLowerCase().match(/[A-Za-záéíóúüñÁÉÍÓÚÜÑ]+/g) || [];
+                    let localCounts = {};
+                    pWordsLocal.forEach(w => localCounts[w] = (localCounts[w] || 0) + 1);
+                    const localRepeats = Object.keys(localCounts).filter(w => localCounts[w] > 2);
+
+                    // Función segura de reemplazo de palabras (Regex con Lookarounds para español y HTML)
+                    function applyWordHighlight(wordsArray, className, reasonPrefix = "") {
+                        wordsArray.forEach(w => {
+                            const safe = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            // Expresión: Ignora si está precedida/seguida por letras, E ignora si está dentro de una etiqueta HTML (<...>)
+                            const reg = new RegExp(`(?<![A-Za-záéíóúüñÁÉÍÓÚÜÑ])(${safe})(?![A-Za-záéíóúüñÁÉÍÓÚÜÑ])(?![^<]*>)`, 'gi');
+                            const attr = reasonPrefix ? ` data-reason="${reasonPrefix}"` : '';
+                            pWrapped = pWrapped.replace(reg, `<span class="${className}"${attr}>$1</span>`);
+                        });
+                    }
+
+                    // B. Aplicar resaltados de palabras (El orden importa para anidación HTML)
+                    // 1. Diccionario Académico
+                    academicDict.forEach(item => applyWordHighlight([item.word], 'hl-acad', item.reason));
+                    
+                    // 2. Top 30 (>4)
+                    applyWordHighlight(Array.from(setTop4), 'hl-top4', 'Pertenece al Top 30 de palabras más usadas (>4 caracteres).');
+                    
+                    // 3. Top 30 Todas
+                    applyWordHighlight(Array.from(setTopAll), 'hl-top', 'Pertenece al Top 30 absoluto de palabras más usadas (incluye conectores).');
+                    
+                    // 4. Repeticiones locales
+                    applyWordHighlight(localRepeats, 'hl-rep', 'Palabra repetida más de 2 veces en este mismo párrafo. Sugerencia: Usa sinónimos.');
+
+                    finalHtml += `<p>${pWrapped}</p>`;
+                });
+
+                viewer.innerHTML = finalHtml;
+                setupInteractivity();
             }
 
-            // 4. Funciones Auxiliares
-            function renderTop20(wordCounts) {
-                const sortedWords = Object.entries(wordCounts)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 20);
+            // Utilidades
+            function getTop(dict, limit) {
+                return Object.keys(dict)
+                    .map(key => ({ word: key, count: dict[key] }))
+                    .sort((a, b) => b.count - a.count)
+                    .slice(0, limit);
+            }
 
-                wordRanking.innerHTML = '';
-                
-                if (sortedWords.length === 0) {
-                    wordRanking.innerHTML = '<li>No hay suficientes palabras para el ranking.</li>';
-                    return;
-                }
-
-                sortedWords.forEach(([word, count]) => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `<span>${word}</span> <strong>${count}</strong>`;
-                    wordRanking.appendChild(li);
+            function renderRanking(elementId, dataArray) {
+                const ul = document.getElementById(elementId);
+                ul.innerHTML = '';
+                dataArray.forEach(item => {
+                    ul.innerHTML += `<li><span>${item.word}</span> <strong>${item.count}</strong></li>`;
                 });
             }
 
-            function setupPanelInteractivity() {
-                const aiPhrases = document.querySelectorAll('.highlight-ai');
-                aiPhrases.forEach(el => {
-                    el.addEventListener('click', function() {
+            function setupInteractivity() {
+                const spans = document.querySelectorAll('#document-viewer span[class^="hl-"]');
+                spans.forEach(span => {
+                    span.addEventListener('click', function(e) {
+                        e.stopPropagation(); // Evitar que el clic pase a spans inferiores si están anidados
                         const reason = this.getAttribute('data-reason');
-                        aiExplanation.innerHTML = `<strong>Patrón detectado:</strong> "${this.textContent}"<br><br><em>${reason}</em>`;
-                        
-                        // Efecto visual para indicar selección
-                        aiPhrases.forEach(p => p.style.backgroundColor = 'var(--ai-color)');
-                        this.style.backgroundColor = '#ffb3b3';
+                        if(reason) {
+                            explanationBox.innerHTML = `<strong>Análisis de:</strong> "${this.textContent}"<br><br><span style="color:#0f172a;">${reason}</span>`;
+                        }
                     });
                 });
-            }
-
-            function handleError(err) {
-                console.error("Error al leer el archivo Word: ", err);
-                documentViewer.innerHTML = `<p style="color:red;">Error al procesar el archivo. Asegúrate de que es un .docx válido.</p>`;
             }
         });
     </script>
