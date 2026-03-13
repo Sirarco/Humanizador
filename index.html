@@ -3,339 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Humanizer AI & APA Auditor v.6.1 (Enterprise)</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <style>
-        :root {
-            --bg-color: #f8fafc; --text-color: #334155; --paper-bg: #ffffff;
-            --sidebar-bg: #ffffff; --border-color: #e2e8f0; --primary: #0f172a; --primary-hover: #334155;
-            /* IA Colors */
-            --c-inicio: #bfdbfe; --c-continuacion: #99f6e4; --c-explicacion: #fef08a;  
-            --c-consecuencia: #fed7aa; --c-cierre: #fecaca; --c-estructural: #e9d5ff;  
-            --c-sobreesp: #fbcfe8; --c-neutralidad: #e2e8f0; --c-impersonal: #d9f99d;   
-            --c-primera: #fca5a5; --c-generico: #cbd5e1; --c-humano: #bbf7d0;
-            /* NEW: Echo Color (Llamativo) */
-            --c-echo: #ff00ff; 
-        }
-        [data-theme="dark"] {
-            --bg-color: #0f172a; --text-color: #f1f5f9; --paper-bg: #1e293b;
-            --sidebar-bg: #1e293b; --border-color: #334155; --primary: #3b82f6; --primary-hover: #2563eb;
-            --c-inicio: #1e3a8a; --c-continuacion: #115e59; --c-explicacion: #854d0e;
-            --c-consecuencia: #9a3412; --c-cierre: #7f1d1d; --c-estructural: #581c87;
-            --c-sobreesp: #831843; --c-neutralidad: #334155; --c-impersonal: #3f6212;
-            --c-primera: #991b1b; --c-generico: #475569; --c-humano: #166534;
-            --c-echo: #ff00ff;
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); transition: 0.3s; overflow: hidden; }
-        
-        header { padding: 1rem 2rem; background: var(--sidebar-bg); border-bottom: 1px solid var(--border-color); display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; z-index: 10; position: relative; }
-        h1 { font-size: 1.1rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 10px; }
-
-        .tabs { display: flex; gap: 1rem; margin-right: auto; margin-left: 2rem; }
-        .tab-btn { background: transparent; color: var(--text-color); border: none; padding: 0.5rem 1rem; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; opacity: 0.6; transition: 0.2s; font-size: 0.9rem;}
-        .tab-btn.active { opacity: 1; border-bottom-color: var(--primary); color: var(--primary); }
-        .tab-content { display: none; height: 100%; width: 100%; overflow: hidden; }
-        .tab-content.active { display: flex; }
-
-        .loader { display: none; width: 18px; height: 18px; border: 2px solid var(--primary); border-bottom-color: transparent; border-radius: 50%; animation: rotation 1s linear infinite; }
-        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        .controls { display: flex; gap: 0.5rem; align-items: center; }
-        button, label.btn { background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: 0.2s; }
-        .btn-secondary { background: transparent; color: var(--text-color); border: 1px solid var(--border-color); }
-        input[type="file"] { display: none; }
-
-        .layout { display: flex; flex-direction: row; height: calc(100vh - 70px); width: 100%; }
-        #sidebar { width: 380px; background: var(--sidebar-bg); border-right: 1px solid var(--border-color); padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; }
-        
-        /* Dashboard Metrics */
-        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
-        .metric-card { background: var(--bg-color); padding: 0.8rem; border-radius: 8px; text-align: center; border: 1px solid var(--border-color); }
-        .metric-value { font-size: 1.5rem; font-weight: 700; color: var(--primary); margin-top: 0.2rem; }
-        .metric-card h3 { font-size: 0.7rem; text-transform: uppercase; color: #64748b; }
-        
-        .alert-box { display: none; background: #fee2e2; color: #991b1b; padding: 0.8rem; border-radius: 6px; font-size: 0.75rem; border: 1px solid #f87171; line-height: 1.4; margin-bottom: 0.5rem; }
-        .alert-echo { background: #fae8ff; color: #86198f; border-color: #d946ef; display: none; } /* Magenta Alerta */
-
-        /* Accordion */
-        .category-header { display: flex; justify-content: space-between; padding: 0.7rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer; font-weight: 600; background: var(--bg-color); border: 1px solid transparent; margin-bottom: 0.2rem; }
-        .category-body { display: none; padding: 0.5rem; flex-direction: column; gap: 0.4rem; }
-        .category-body.active { display: flex; }
-        .cat-desc { font-size: 0.7rem; color: #64748b; font-style: italic; margin-bottom: 0.4rem; }
-        .finding-instance { font-size: 0.75rem; padding: 0.4rem 0.6rem; background: var(--bg-color); border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; }
-        .finding-instance:hover { transform: translateX(3px); filter: brightness(0.95); }
-
-        /* Top Words */
-        .top-words-container { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.8rem; }
-        .word-list { display: flex; flex-direction: column; gap: 0.2rem; max-height: 150px; overflow-y: auto; }
-        .word-item { display: flex; justify-content: space-between; font-size: 0.75rem; }
-
-        /* Editor */
-        #main-view { flex: 1; display: flex; position: relative; overflow: hidden; background: #e2e8f0; }
-        [data-theme="dark"] #main-view { background: #020617; }
-        #editor-container { flex: 1; padding: 2rem; overflow-y: auto; display: flex; justify-content: center; }
-        #paper { background: var(--paper-bg); width: 100%; max-width: 850px; min-height: 1000px; padding: 5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.1); font-size: 1.1rem; line-height: 2; outline: none; border-radius: 2px; color: var(--text-color); }
-        
-        /* Marks */
-        mark { border-radius: 2px; padding: 0 0.1rem; cursor: pointer; color: inherit; transition: 0.2s; }
-        .mark-echo { background-color: var(--c-echo); color: white; font-weight: 600; text-decoration: underline; }
-
-        #heatmap-container { width: 30px; background: var(--sidebar-bg); border-left: 1px solid var(--border-color); position: relative; }
-        .heat-tick { position: absolute; width: 100%; height: 3px; cursor: pointer; }
-
-        /* APA Dashboard */
-        #apa-dashboard { flex: 1; padding: 3rem; overflow-y: auto; display: flex; justify-content: center; background: var(--bg-color); }
-        .apa-container { max-width: 800px; width: 100%; display: flex; flex-direction: column; gap: 2rem; }
-        .apa-card { background: var(--paper-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 2rem; }
-        .apa-card h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 1.5rem; border-bottom: 2px solid var(--bg-color); padding-bottom: 0.5rem; }
-        .audit-item { display: flex; align-items: center; justify-content: space-between; padding: 1rem 0; border-bottom: 1px solid var(--bg-color); }
-        .status-badge { padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
-        .status-pass { background: #dcfce7; color: #15803d; }
-        .status-fail { background: #fee2e2; color: #b91c1c; }
-
-        /* Tooltip */
-        #smart-tooltip { position: fixed; opacity: 0; pointer-events: none; transition: 0.2s; background: var(--paper-bg); border: 1px solid var(--border-color); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); padding: 1.2rem; border-radius: 12px; z-index: 1000; width: 300px; }
-        #smart-tooltip.show { opacity: 1; pointer-events: auto; }
-        .tt-razon { font-size: 0.7rem; font-weight: 800; color: #ef4444; margin-bottom: 0.5rem; text-transform: uppercase; }
-        .tt-sugerencia { font-size: 0.85rem; line-height: 1.5; margin-bottom: 1rem; }
-
-        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    </style>
+    <title>Analizador de Redacción IA - Client Side</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 </head>
 <body>
-
-    <header>
-        <h1>Humanizer v.6.1 <div class="loader" id="loader"></div></h1>
-        <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('tab-ia')">Detección IA</button>
-            <button class="tab-btn" onclick="switchTab('tab-apa')">Auditoría APA</button>
-        </div>
-        <div class="controls">
-            <button id="themeToggle" class="btn-secondary">Modo Noche</button>
-            <label class="btn btn-secondary">Cargar Word <input type="file" id="uploadDoc" accept=".docx"></label>
-            <button id="btnAnalyze" style="background: #10b981;">Analizar Todo</button>
-            <button id="btnClean" class="btn-secondary">Exportar</button>
-        </div>
+    <header class="header">
+        <h1>Auditor de Estilo y Redacción</h1>
+        <p>Sube tu archivo .docx para analizar patrones de IA y repeticiones.</p>
+        <input type="file" id="uploadInput" accept=".docx">
     </header>
 
-    <div class="layout">
-        <div id="tab-ia" class="tab-content active">
-            <aside id="sidebar">
-                <div class="dashboard-grid">
-                    <div class="metric-card"><h3>Densidad IA</h3><div class="metric-value" id="densityMetric">0%</div></div>
-                    <div class="metric-card"><h3>Humanidad</h3><div class="metric-value" id="entropyMetric" style="color:#10b981;">100%</div></div>
-                </div>
-
-                <div class="alert-box alert-echo" id="echoAlert"><strong>⚠️ Eco Léxico Detectado:</strong> Se repiten palabras clave dentro de los mismos párrafos.</div>
-                <div class="alert-box" id="iecAlert" style="background:#fef3c7; color:#92400e; border-color:#f59e0b;"><strong>⚠️ Estructura I+E+C:</strong> Párrafos con patrón robótico.</div>
-
-                <div class="top-words-container">
-                    <h3 style="font-size:0.7rem; margin-bottom:0.5rem; color:#64748b;">TOP 20 PALABRAS (≥5)</h3>
-                    <div class="word-list" id="wordListBody"></div>
-                </div>
-
-                <div id="dynamic-accordion">
-                    </div>
-
-                <div class="disclaimer-box" style="font-size:0.7rem; color:#64748b; margin-top:auto; padding:0.5rem; border:1px solid var(--border-color); border-radius:4px;">
-                    Métrica probabilística. Rompe la simetría para humanizar.
-                </div>
-            </aside>
-            <section id="main-view">
-                <div id="editor-container"><div id="paper" contenteditable="true"><p>Pega o carga tu texto...</p></div></div>
-                <div id="heatmap-container"></div>
-            </section>
-        </div>
-
-        <div id="tab-apa" class="tab-content">
-            <div id="apa-dashboard">
-                <div class="apa-container">
-                    <div class="apa-card">
-                        <h2>Formato Físico Institucional</h2>
-                        <div id="audit-formato"><p style="color:gray;">Sin datos.</p></div>
-                    </div>
-                    <div class="apa-card">
-                        <h2>Sintaxis APA 7 (Citas)</h2>
-                        <div id="audit-citas"><p style="color:gray;">Sin datos.</p></div>
-                    </div>
-                </div>
+    <main class="dashboard">
+        <section class="viewer-section">
+            <div id="document-viewer" class="document-content">
+                <p class="placeholder-text">El texto analizado aparecerá aquí...</p>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <div id="smart-tooltip">
-        <div class="tt-razon" id="tt-razon"></div>
-        <div class="tt-sugerencia" id="tt-sugerencia"></div>
-        <button class="btn btn-secondary" style="width:100%; font-size:0.7rem;" id="btn-ignore-action">Ignorar</button>
-    </div>
+        <aside class="panel-section">
+            <div class="panel-box explanation-box">
+                <h2>🔍 Explicación IA</h2>
+                <p id="ai-explanation">Haz clic en una frase resaltada en <span style="color: #d9534f; font-weight: bold;">rojo</span> para ver por qué se identificó como un patrón común de Inteligencia Artificial.</p>
+            </div>
 
-    <script>
-        // 1. DICCIONARIO IA COMPLETO (v5.0 + v6.0)
-        const categoriesData = {
-            echo: { nombre: "Eco Léxico (Repetición)", varColor: "--c-echo", colorHex: "#ff00ff", desc: "Palabras repetidas más de 3 veces en un solo párrafo.", razonDefecto: "REPETICIÓN EXCESIVA", sugDefecto: "Usa sinónimos o reestructura para evitar el 'eco' léxico que las IAs generan al mantener coherencia." },
-            humano: { nombre: "Rasgo Humano (+)", varColor: "--c-humano", colorHex: "#bbf7d0", isPositive: true, desc: "Conectores orgánicos.", razonDefecto: "ESTILO ORGÁNICO", sugDefecto: "¡Bien! Esto rompe la previsibilidad.", palabras: ["incluso", "de hecho", "por eso", "a pesar de que", "en realidad", "sin ir más lejos", "por ejemplo"] },
-            generico: { nombre: "Vocabulario Genérico", varColor: "--c-generico", colorHex: "#cbd5e1", isNeutral: true, desc: "Palabras abstractas.", razonDefecto: "SATURACIÓN CONCEPTUAL", sugDefecto: "Cámbiala por un dato específico.", palabras: ["fundamental", "crucial", "esencial", "significativo", "relevante", "importante", "analizar", "comprender", "abordar", "considerar", "evaluar", "contexto", "perspectiva", "enfoque", "ámbito", "proceso", "dinámica", "impacto", "desarrollo", "evolución"] },
-            inicio: { nombre: "Conectores Inicio", varColor: "--c-inicio", colorHex: "#bfdbfe", desc: "Aperturas IA.", razonDefecto: "APERTURA PREDECIBLE", sugDefecto: "Entra directo al tema.", palabras: ["en primer lugar", "para comenzar", "en términos generales", "en este contexto", "en este sentido", "cabe destacar que"] },
-            explicacion: { nombre: "Explicación IA", varColor: "--c-explicacion", colorHex: "#fef08a", desc: "Parafraseo redundante.", razonDefecto: "REDUNDANCIA", sugDefecto: "Elimina la explicación de lo obvio.", palabras: ["es decir", "en otras palabras", "esto significa que", "lo que implica que"] },
-            consecuencia: { nombre: "Consecuencia IA", varColor: "--c-consecuencia", colorHex: "#fed7aa", desc: "Cierres lógicos.", razonDefecto: "CIERRE ALGORÍTMICO", sugDefecto: "Usa un verbo de acción.", palabras: ["por lo tanto", "en consecuencia", "por consiguiente", "de ahí que"] },
-            estructural: { nombre: "Frases Estructurales", varColor: "--c-estructural", colorHex: "#e9d5ff", desc: "Muletillas didácticas.", razonDefecto: "TONO ARTIFICIAL", sugDefecto: "Borra la frase introductoria.", palabras: ["es importante destacar que", "es fundamental comprender que", "cabe señalar que", "conviene mencionar que", "resulta relevante considerar que", "en este sentido, se puede afirmar que"] },
-            impersonal: { nombre: "Voz Impersonal", varColor: "--c-impersonal", colorHex: "#d9f99d", desc: "Evasión subjetiva.", razonDefecto: "ESCUDO ACADÉMICO", sugDefecto: "Usa voz activa.", palabras: ["se puede observar que", "se puede afirmar que", "se ha demostrado que", "se ha observado que"] }
-        };
-
-        const paper = document.getElementById('paper');
-        const tooltip = document.getElementById('smart-tooltip');
-        let currentFile = null;
-        let tooltipTimeout;
-
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            event.target.classList.add('active');
-        }
-
-        document.getElementById('themeToggle').addEventListener('click', () => document.body.setAttribute('data-theme', document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
-
-        document.getElementById('uploadDoc').addEventListener('change', function(e) {
-            currentFile = this.files[0];
-            const reader = new FileReader();
-            reader.onload = e => mammoth.convertToHtml({arrayBuffer: e.target.result}).then(r => paper.innerHTML = r.value);
-            reader.readAsArrayBuffer(currentFile);
-        });
-
-        window.toggleAccordion = (key) => {
-            const body = document.getElementById(`body-${key}`);
-            const isActive = body.classList.contains('active');
-            document.querySelectorAll('.category-body').forEach(b => b.classList.remove('active'));
-            if(!isActive) body.classList.add('active');
-        };
-
-        window.scrollToMark = (id) => {
-            const el = document.getElementById(id);
-            if(el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                el.style.boxShadow = "0 0 0 4px #ff00ff";
-                setTimeout(() => el.style.boxShadow = "none", 2000);
-            }
-        };
-
-        // MOTOR v6.1
-        document.getElementById('btnAnalyze').addEventListener('click', async () => {
-            const loader = document.getElementById('loader'); loader.style.display = 'block';
-            await new Promise(r => setTimeout(r, 100));
-
-            // A. LIMPIEZA
-            let html = paper.innerHTML.replace(/<mark[^>]*>(.*?)<\/mark>/gi, "$1");
-            const temp = document.createElement('div'); temp.innerHTML = html;
-            const plainText = temp.innerText;
-            const paragraphs = Array.from(temp.querySelectorAll('p, div')).filter(p => p.innerText.trim().length > 10);
-
-            // B. ANÁLISIS ECO (REPETICIÓN POR PÁRRAFO)
-            let echoCount = 0;
-            paragraphs.forEach((p, pIdx) => {
-                const words = p.innerText.toLowerCase().match(/[a-záéíóúüñ]{5,}/g) || [];
-                const counts = {};
-                words.forEach(w => counts[w] = (counts[w] || 0) + 1);
-                const repeated = Object.keys(counts).filter(w => counts[w] > 3);
-                
-                if(repeated.length > 0) {
-                    echoCount++;
-                    repeated.forEach(word => {
-                        const regex = new RegExp(`\\b(${word})\\b`, 'gi');
-                        p.innerHTML = p.innerHTML.replace(regex, `<mark id="echo-${pIdx}" class="mark-echo" data-razon="ECO LÉXICO" data-sugerencia="Repetiste '${word}' ${counts[word]} veces en este párrafo.">$1</mark>`);
-                    });
-                }
-            });
-            document.getElementById('echoAlert').style.display = echoCount > 0 ? 'block' : 'none';
-
-            // C. ANÁLISIS APA XML
-            if(currentFile) {
-                const zip = await JSZip.loadAsync(currentFile);
-                const docXml = await zip.file("word/document.xml").async("string");
-                const stylesXml = await zip.file("word/styles.xml").async("string");
-                
-                const pgSz = docXml.match(/w:h="(\d+)"/);
-                const pgMar = docXml.match(/w:top="(\d+)" w:right="(\d+)" w:bottom="(\d+)" w:left="(\d+)"/);
-                
-                let formatH = "";
-                const check = (n, p, d) => formatH += `<div class="audit-item"><span><strong>${n}</strong><br><small>${d}</small></span><span class="status-badge ${p?'status-pass':'status-fail'}">${p?'OK':'ERROR'}</span></div>`;
-                
-                check("Tamaño Oficio", pgSz && parseInt(pgSz[1]) > 18000, "Req: 21,6 x 33 cm.");
-                check("Margen Izquierdo (4cm)", pgMar && pgMar[4] === "2268", "Req: 4.0 cm para empastado.");
-                check("Margen Derecho (3cm)", pgMar && pgMar[2] === "1701", "Req: 3.0 cm.");
-                document.getElementById('audit-formato').innerHTML = formatH;
-
-                // Sintaxis APA
-                let syntaxH = "";
-                const etAlErr = (plainText.match(/et\. al/gi) || []).length;
-                const citHuert = (plainText.match(/\(\w+, \d{4}\)/g) || []).length;
-                
-                syntaxH += `<div class="audit-item"><span><strong>Uso de et al.</strong><br><small>Detectados: ${etAlErr}</small></span><span class="status-badge ${etAlErr===0?'status-pass':'status-fail'}">AUDITAR</span></div>`;
-                syntaxH += `<div class="audit-item"><span><strong>Citas en Texto</strong><br><small>Total encontradas: ${citHuert}</small></span><span class="status-badge status-pass">INFO</span></div>`;
-                document.getElementById('audit-citas').innerHTML = syntaxH;
-            }
-
-            // D. ANÁLISIS IA & ACORDEÓN
-            let htmlFinal = temp.innerHTML;
-            let aiMatchesTotal = 0;
-            let accordionH = "";
-            let instanceId = 0;
-
-            for (const [key, data] of Object.entries(categoriesData)) {
-                if(key === 'echo') continue; // Eco se procesó antes
-                let catMatches = [];
-                const phrases = (data.palabras || []).sort((a,b) => b.length - a.length);
-                
-                phrases.forEach(phrase => {
-                    const regex = new RegExp(`(?<!<[^>]*)\\b(${phrase})\\b(?![^<]*>)`, 'gi');
-                    htmlFinal = htmlFinal.replace(regex, (m) => {
-                        instanceId++;
-                        const id = `m-${instanceId}`;
-                        catMatches.push({word: m, id: id});
-                        aiMatchesTotal++;
-                        return `<mark id="${id}" class="mark-${key}" data-razon="${data.razonDefecto}" data-sugerencia="${data.sugDefecto}">${m}</mark>`;
-                    });
-                });
-
-                accordionH += `<div class="category-header cat-${key}" onclick="toggleAccordion('${key}')"><span>${data.nombre}</span><span>${catMatches.length}</span></div>`;
-                accordionH += `<div class="category-body" id="body-${key}"><div class="cat-desc">${data.desc}</div>`;
-                catMatches.forEach(m => accordionH += `<div class="finding-instance" onclick="scrollToMark('${m.id}')"><span>"${m.word}"</span><span>→</span></div>`);
-                accordionH += `</div>`;
-            }
-
-            paper.innerHTML = htmlFinal;
-            document.getElementById('dynamic-accordion').innerHTML = accordionH;
+            <div class="panel-box ranking-box">
+                <h2>🏆 Top 20 Palabras</h2>
+                <p class="small-text">Palabras de >4 caracteres más usadas (excluyendo conectores).</p>
+                <ul id="word-ranking" class="ranking-list">
+                    <li>Esperando documento...</li>
+                </ul>
+            </div>
             
-            // E. TOP 20
-            const cleanW = plainText.toLowerCase().replace(/[^\wáéíóúüñ\s]/g, '').split(/\s+/).filter(w => w.length >= 5);
-            const freq = {}; cleanW.forEach(w => freq[w] = (freq[w]||0)+1);
-            const top20 = Object.entries(freq).sort((a,b) => b[1]-a[1]).slice(0, 20);
-            document.getElementById('wordListBody').innerHTML = top20.map(i => `<div class="word-item"><span>${i[0]}</span><strong>${i[1]}</strong></div>`).join('');
+            <div class="panel-box legend-box">
+                <h2>🎨 Leyenda</h2>
+                <p><span class="highlight-ai">Fondo Rojo:</span> Posible patrón de IA.</p>
+                <p><span class="highlight-repeat">Fondo Azul:</span> Palabra repetida en el mismo párrafo (>2 veces).</p>
+            </div>
+        </aside>
+    </main>
 
-            // METRICAS
-            const totalW = plainText.split(/\s+/).length;
-            document.getElementById('densityMetric').innerText = `${((aiMatchesTotal*1.5)/totalW*100).toFixed(1)}%`;
-            document.getElementById('entropyMetric').innerText = `${Math.max(0, 100 - (aiMatchesTotal/totalW*500)).toFixed(0)}%`;
-
-            loader.style.display = 'none';
-        });
-
-        // Tooltip logic
-        paper.addEventListener('mouseover', e => {
-            if(e.target.tagName === 'MARK') {
-                document.getElementById('tt-razon').innerText = e.target.dataset.razon;
-                document.getElementById('tt-sugerencia').innerText = e.target.dataset.sugerencia;
-                const rect = e.target.getBoundingClientRect();
-                tooltip.style.left = `${rect.left}px`;
-                tooltip.style.top = `${rect.top - 120}px`;
-                tooltip.classList.add('show');
-            }
-        });
-        paper.addEventListener('mouseout', () => tooltip.classList.remove('show'));
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
